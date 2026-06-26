@@ -1,5 +1,7 @@
 package com.factlens.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
 data class VerificationRequest(
@@ -21,7 +23,9 @@ data class Source(
     @SerializedName("snippet") val snippet: String
 )
 
+@Entity(tableName = "ScanHistory")
 data class ScanHistory(
+    @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val timestamp: Long = System.currentTimeMillis(),
     val claim: String,

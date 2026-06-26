@@ -6,6 +6,8 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
@@ -13,7 +15,7 @@ import java.util.concurrent.TimeUnit
 interface FactLensApi {
 
     @POST("verify")
-    suspend fun verifyText(@Body request: VerificationRequest): VerificationResponse
+    fun verifyText(@Body request: VerificationRequest): Call<VerificationResponse>
 
     companion object {
         // Use 10.0.2.2 for Android emulator, change for real device

@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
-import com.factlens.capture.ScreenCaptureManager
 import com.factlens.ui.theme.FactLensTheme
 
 class OverlayService : Service() {
@@ -79,10 +78,13 @@ class OverlayService : Service() {
             setContent {
                 FactLensTheme {
                     FloatingTriggerButton(
-                    onTap = {
-                        val manager = ScreenCaptureManager(this@OverlayService)
-                    manager.requestCapture(this@OverlayService)
-                }
+                        onTap = {
+                            val intent = packageManager.getLaunchIntentForPackage(packageName)
+                            intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            intent?.putExtra("trigger_capture", true)
+                            startActivity(intent)
+                        }
+                    )
                 }
             }
         }

@@ -36,7 +36,7 @@ import com.factlens.ui.theme.Spacing
 
 class MainActivity : ComponentActivity() {
 
-    private val overlayPermissionLauncher = registerForActivityResult(
+    val overlayPermissionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { /* check manually */ }
 

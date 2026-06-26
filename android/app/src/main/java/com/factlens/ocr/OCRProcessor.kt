@@ -90,6 +90,6 @@ class OCRProcessor : IntentService("OCRProcessor") {
             sourcesJson = gson.toJson(response.sources)
         )
         val dao = com.factlens.history.HistoryDatabase.getInstance(this).historyDao()
-        Thread { dao.insert(history) }.start()
+        kotlinx.coroutines.runBlocking { dao.insert(history) }
     }
 }

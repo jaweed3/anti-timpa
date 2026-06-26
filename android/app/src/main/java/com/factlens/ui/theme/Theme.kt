@@ -34,6 +34,7 @@ object FactLensColors {
     val onTertiaryContainer = Color(0xFFFCCEAF)
     val tertiaryFixed = Color(0xFFFFDCC6)
     val tertiaryFixedDim = Color(0xFFFFB784)
+    val onTertiaryFixedVariant = Color(0xFF713700)
 
     val error = Color(0xFFBA1A1A)
     val errorContainer = Color(0xFFFFDAD6)
