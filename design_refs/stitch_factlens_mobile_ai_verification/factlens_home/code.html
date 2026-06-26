@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>FactLens - AI Verification</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#f2f3fa",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#99f2be",
+                    "on-tertiary-fixed-variant": "#713700",
+                    "tertiary": "#713700",
+                    "primary-fixed-dim": "#9fcaff",
+                    "surface-bright": "#f8f9ff",
+                    "background-almost-white": "#FDFBFF",
+                    "on-background": "#191c20",
+                    "success-emerald": "#006D44",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c1c7d2",
+                    "secondary": "#006d44",
+                    "neutral-gray": "#74777F",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#ffdcc6",
+                    "error-red": "#BA1A1A",
+                    "primary-fixed": "#d1e4ff",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#944a00",
+                    "surface-pure-white": "#FFFFFF",
+                    "inverse-on-surface": "#eff0f7",
+                    "on-primary-container": "#c0dbff",
+                    "on-primary-fixed-variant": "#00497d",
+                    "background": "#f8f9ff",
+                    "on-surface": "#191c20",
+                    "inverse-primary": "#9fcaff",
+                    "on-secondary-container": "#0a7148",
+                    "outline": "#717782",
+                    "secondary-fixed-dim": "#80d8a6",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#d8dae0",
+                    "surface": "#f8f9ff",
+                    "on-tertiary-container": "#ffceaf",
+                    "warning-amber": "#924C00",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eceef4",
+                    "surface-container-high": "#e6e8ee",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#0061a4",
+                    "primary": "#00497d",
+                    "on-primary-fixed": "#001d36",
+                    "on-secondary-fixed": "#002111",
+                    "tertiary-fixed-dim": "#ffb784",
+                    "on-tertiary-fixed": "#301400",
+                    "on-surface-variant": "#414750",
+                    "on-secondary-fixed-variant": "#005232",
+                    "secondary-fixed": "#9cf5c1",
+                    "inverse-surface": "#2e3135",
+                    "surface-container-highest": "#e1e2e8",
+                    "surface-tint": "#0061a4",
+                    "surface-variant": "#e1e2e8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "sm": "8px",
+                    "xl": "24px",
+                    "lg": "16px",
+                    "3xl": "48px",
+                    "md": "12px",
+                    "2xl": "32px"
+            },
+            "fontFamily": {
+                    "caption": ["Inter"],
+                    "title-md": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.4px", "fontWeight": "400"}],
+                    "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0.15px", "fontWeight": "500"}],
+                    "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                    "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                    "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-almost-white text-on-background min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-background-almost-white dark:bg-on-background flex justify-between items-center w-full px-lg py-sm h-14 fixed top-0 z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="security">security</span>
+<span class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed-dim">FactLens</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs px-md py-xs bg-surface-container-high rounded-full">
+<div class="w-2 h-2 bg-success-emerald rounded-full animate-pulse"></div>
+<span class="font-label-lg text-label-lg text-on-surface-variant">System Ready</span>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-high transition-colors p-sm rounded-full" data-icon="account_circle">account_circle</button>
+</div>
+</header>
+<main class="mt-14 px-lg pt-xl space-y-xl max-w-2xl mx-auto">
+<!-- Hero / Quick Scan -->
+<section>
+<div class="relative overflow-hidden bg-primary-container rounded-xl p-xl shadow-sm group cursor-pointer active:scale-95 transition-transform duration-150">
+<div class="relative z-10 flex flex-col items-center text-center space-y-md">
+<div class="w-16 h-16 bg-on-primary rounded-full flex items-center justify-center shadow-md mb-md">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="document_scanner">document_scanner</span>
+</div>
+<h2 class="font-title-lg text-title-lg text-white">Quick Scan</h2>
+<p class="font-body-md text-body-md text-primary-fixed max-w-xs">Verify any text, image, or URL for accuracy in seconds.</p>
+<button class="mt-xl bg-on-primary text-primary-container px-2xl py-md rounded-full font-label-lg text-label-lg font-bold shadow-lg flex items-center gap-sm">
+                        Start Verification
+                        <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Abstract background decoration -->
+<div class="absolute -top-10 -right-10 w-48 h-48 bg-primary opacity-20 rounded-full blur-3xl"></div>
+<div class="absolute -bottom-10 -left-10 w-48 h-48 bg-secondary-container opacity-20 rounded-full blur-3xl"></div>
+</div>
+</section>
+<!-- Recent Scans -->
+<section class="space-y-md">
+<div class="flex items-center justify-between">
+<h3 class="font-title-md text-title-md text-on-surface">Recent Scans</h3>
+<button class="font-label-lg text-label-lg text-primary hover:underline transition-all">View All</button>
+</div>
+<div class="space-y-md">
+<!-- FactCard 1 -->
+<div class="bg-surface-pure-white p-lg rounded-xl shadow-sm border border-surface-container-low flex items-start gap-lg hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-success-emerald" data-icon="check_circle">check_circle</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-label-lg text-label-lg text-success-emerald px-md py-xs bg-secondary-container/20 rounded-full">Verified</span>
+<span class="font-caption text-caption text-neutral-gray">2h ago</span>
+</div>
+<h4 class="font-title-md text-title-md text-on-surface truncate">Global temperatures reach record high...</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1 mt-xs">Analysis confirmed by 4 independent scientific reports.</p>
+</div>
+</div>
+<!-- FactCard 2 -->
+<div class="bg-surface-pure-white p-lg rounded-xl shadow-sm border border-surface-container-low flex items-start gap-lg hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-warning-amber" data-icon="warning">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-label-lg text-label-lg text-warning-amber px-md py-xs bg-tertiary-fixed/40 rounded-full">Misleading</span>
+<span class="font-caption text-caption text-neutral-gray">5h ago</span>
+</div>
+<h4 class="font-title-md text-title-md text-on-surface truncate">New policy impact on local economy...</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1 mt-xs">Context missing regarding specific demographics.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Saved Results (Horizontal) -->
+<section class="space-y-md">
+<h3 class="font-title-md text-title-md text-on-surface">Saved Results</h3>
+<div class="flex overflow-x-auto hide-scrollbar gap-lg -mx-lg px-lg pb-md">
+<!-- SavedCard 1 -->
+<div class="min-w-[240px] bg-surface-pure-white rounded-xl shadow-sm overflow-hidden border border-surface-container-low">
+<div class="h-24 bg-surface-container-high relative">
+<img class="w-full h-full object-cover" data-alt="A minimalist architectural photograph of a modern research facility, featuring clean lines and large glass panels reflecting a clear blue sky. Professional corporate aesthetic with high-key lighting and a sense of progress and transparency." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaEEoR-GuGrHqYeMa71h8fEqOUhHU_8z4SLhdlbkrK-jbe7m565ljE7qcIw9R1YV9fQTIRRM3BQ23pyqlyonXFKcCOk6q3w31vCdfgydkbGH8iM3PsnTLZRHyPlnva9iwYw3Y_4jjD_UMHvgkezUOUdO8I8REZRpe_sT_ekqaP1t0dPgEvsRMDbVT6BCcwx2BiW6rJps6UyNggU9LNjLd8cUbpDSNyK7Rfal_gJXTbXiXL1dDUO2GzAXNkQ0iBzs8iIgWMVU00dYw"/>
+<div class="absolute top-sm right-sm bg-surface-pure-white/80 backdrop-blur-md p-xs rounded-full">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="bookmark" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</div>
+</div>
+<div class="p-md">
+<h5 class="font-label-lg text-label-lg text-on-surface line-clamp-2">The future of renewable energy in urban centers</h5>
+<div class="flex items-center gap-xs mt-sm">
+<span class="material-symbols-outlined text-neutral-gray text-sm" data-icon="analytics">analytics</span>
+<span class="font-caption text-caption text-neutral-gray">98% Confidence</span>
+</div>
+</div>
+</div>
+<!-- SavedCard 2 -->
+<div class="min-w-[240px] bg-surface-pure-white rounded-xl shadow-sm overflow-hidden border border-surface-container-low">
+<div class="h-24 bg-surface-container-high relative">
+<img class="w-full h-full object-cover" data-alt="A detailed macro shot of a complex circuit board with glowing blue pathways. The image has a deep, professional tech vibe with shallow depth of field and soft ambient light hitting the metallic components. Clean, modern, and high-tech corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpdIEBPc8QKgObDn5W5YkUE45kG3X9gvn4X59GXi-DO7efEu6vf5FNdKpn0HKGsqKK80ygzZ7_OwjNW6Eg2bg0N5k41lxBDOcRFrDB6iPqr4G65Hi7c3ZRqUWS5YdFDO9P8xViw2POyGAGrHzv9g7xcDhNYVk0kFlHf1ONqJPE9h2yc5PHPR4hdTz72n-1sxd7ymzw9o_EQS0SMfxshcZahPUQBuMoVCqCNW98cfO6LFj1CV5AqsqNLOufbDz8JglR89AMamYyO4w"/>
+<div class="absolute top-sm right-sm bg-surface-pure-white/80 backdrop-blur-md p-xs rounded-full">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="bookmark" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</div>
+</div>
+<div class="p-md">
+<h5 class="font-label-lg text-label-lg text-on-surface line-clamp-2">Blockchain impact on global supply chain logistics</h5>
+<div class="flex items-center gap-xs mt-sm">
+<span class="material-symbols-outlined text-neutral-gray text-sm" data-icon="analytics">analytics</span>
+<span class="font-caption text-caption text-neutral-gray">92% Confidence</span>
+</div>
+</div>
+</div>
+<!-- SavedCard 3 -->
+<div class="min-w-[240px] bg-surface-pure-white rounded-xl shadow-sm overflow-hidden border border-surface-container-low">
+<div class="h-24 bg-surface-container-high relative">
+<img class="w-full h-full object-cover" data-alt="An artistic representation of neural networks and data points connecting in a vast dark space. The connections are soft white lines with bright nodes, creating a sophisticated and clean visualization of artificial intelligence. Minimalist, professional, and ethereal." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnaoWR39b_5Jp5U77nxcUatgFKFQJPrmptro7vtvetsiMKHsX02WUwBD0YEyLxfz0_NDWyticHm331-mbFikp2GM2-HilnaYhQxO_ZueDtdSzvahXO9MdnitQ-YnnsG1PQB7SQGTEJvWnBurJAqOtFUj-j0bUWAPK73DQygrquzGwpu2vaXzKYWourJnSiSQRC0PxY6rYsHHbXvl0lr79SFce80sljfssl21ZlHh-3dMpBorLILk8-_bCRQ2QUrtSNCAHn7NLWt-8"/>
+<div class="absolute top-sm right-sm bg-surface-pure-white/80 backdrop-blur-md p-xs rounded-full">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="bookmark" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</div>
+</div>
+<div class="p-md">
+<h5 class="font-label-lg text-label-lg text-on-surface line-clamp-2">AI ethics and the evolution of digital truth</h5>
+<div class="flex items-center gap-xs mt-sm">
+<span class="material-symbols-outlined text-neutral-gray text-sm" data-icon="analytics">analytics</span>
+<span class="font-caption text-caption text-neutral-gray">85% Confidence</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-lg py-md pb-safe bg-surface-container-lowest dark:bg-surface-dim shadow-md rounded-t-xl h-16">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-5 py-1 scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-5 py-1 hover:bg-surface-container-high dark:hover:bg-inverse-surface transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-lg text-label-lg">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-5 py-1 hover:bg-surface-container-high dark:hover:bg-inverse-surface transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-label-lg text-label-lg">Saved</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline px-5 py-1 hover:bg-surface-container-high dark:hover:bg-inverse-surface transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-lg text-label-lg">Settings</span>
+</a>
+</nav>
+<!-- Floating Action Button (Contextual for Main Screen) -->
+<button class="fixed bottom-24 right-lg w-14 h-14 bg-primary text-on-primary rounded-xl shadow-xl flex items-center justify-center active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+</button>
+<script>
+        // Simple micro-interaction for cards
+        document.querySelectorAll('.bg-surface-pure-white').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

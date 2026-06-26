@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Screen Scanning Overlay</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    
+    /* Scanning Line Animation */
+    @keyframes scan {
+      0% { transform: translateY(-10vh); opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { transform: translateY(110vh); opacity: 0; }
+    }
+    .scanning-line {
+      animation: scan 3s linear infinite;
+      background: linear-gradient(to bottom, transparent, rgba(0, 73, 125, 0.5), transparent);
+    }
+
+    /* Progress bar animation */
+    @keyframes progress {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+    .progress-fill {
+      animation: progress 3s ease-in-out infinite;
+    }
+
+    /* Pulse effect for the scanner label */
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s ease-in-out infinite;
+    }
+
+    .glass-effect {
+      backdrop-filter: blur(8px);
+      background: rgba(255, 255, 255, 0.8);
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-surface-variant": "#414750",
+                  "tertiary-fixed-dim": "#ffb784",
+                  "on-tertiary-container": "#ffceaf",
+                  "on-tertiary-fixed": "#301400",
+                  "secondary-fixed": "#9cf5c1",
+                  "tertiary-fixed": "#ffdcc6",
+                  "surface-variant": "#e1e2e8",
+                  "surface-bright": "#f8f9ff",
+                  "surface-container-highest": "#e1e2e8",
+                  "secondary": "#006d44",
+                  "secondary-fixed-dim": "#80d8a6",
+                  "secondary-container": "#99f2be",
+                  "success-emerald": "#006D44",
+                  "tertiary": "#713700",
+                  "neutral-gray": "#74777F",
+                  "surface": "#f8f9ff",
+                  "on-error": "#ffffff",
+                  "error-red": "#BA1A1A",
+                  "surface-pure-white": "#FFFFFF",
+                  "surface-tint": "#0061a4",
+                  "error-container": "#ffdad6",
+                  "on-primary-fixed": "#001d36",
+                  "surface-container-high": "#e6e8ee",
+                  "on-secondary-fixed-variant": "#005232",
+                  "primary-container": "#0061a4",
+                  "on-tertiary": "#ffffff",
+                  "inverse-surface": "#2e3135",
+                  "outline": "#717782",
+                  "error": "#ba1a1a",
+                  "primary-fixed-dim": "#9fcaff",
+                  "inverse-on-surface": "#eff0f7",
+                  "inverse-primary": "#9fcaff",
+                  "background": "#f8f9ff",
+                  "on-secondary-fixed": "#002111",
+                  "on-secondary": "#ffffff",
+                  "on-primary-fixed-variant": "#00497d",
+                  "on-background": "#191c20",
+                  "on-primary-container": "#c0dbff",
+                  "primary": "#00497d",
+                  "on-tertiary-fixed-variant": "#713700",
+                  "on-primary": "#ffffff",
+                  "on-secondary-container": "#0a7148",
+                  "surface-container": "#eceef4",
+                  "on-surface": "#191c20",
+                  "tertiary-container": "#944a00",
+                  "surface-container-low": "#f2f3fa",
+                  "primary-fixed": "#d1e4ff",
+                  "outline-variant": "#c1c7d2",
+                  "warning-amber": "#924C00",
+                  "surface-container-lowest": "#ffffff",
+                  "surface-dim": "#d8dae0",
+                  "on-error-container": "#93000a",
+                  "background-almost-white": "#FDFBFF"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "md": "12px",
+                  "xs": "4px",
+                  "xl": "24px",
+                  "sm": "8px",
+                  "lg": "16px",
+                  "3xl": "48px",
+                  "2xl": "32px"
+          },
+          "fontFamily": {
+                  "headline-sm": ["Inter"],
+                  "label-lg": ["Inter"],
+                  "title-lg": ["Inter"],
+                  "body-md": ["Inter"],
+                  "caption": ["Inter"],
+                  "body-lg": ["Inter"],
+                  "title-md": ["Inter"],
+                  "display-lg": ["Inter"],
+                  "headline-lg": ["Inter"]
+          },
+          "fontSize": {
+                  "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "400"}],
+                  "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                  "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                  "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                  "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.4px", "fontWeight": "400"}],
+                  "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}],
+                  "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0.15px", "fontWeight": "500"}],
+                  "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}],
+                  "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md overflow-hidden">
+<!-- Background App Content (Simulated News App) -->
+<main class="fixed inset-0 overflow-y-auto px-lg py-3xl brightness-75 transition-all duration-700">
+<!-- Top Nav of the Background App -->
+<header class="flex justify-between items-center mb-2xl">
+<span class="material-symbols-outlined text-on-surface-variant">menu</span>
+<div class="font-headline-sm text-headline-sm font-bold text-primary italic">Global Report</div>
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</header>
+<!-- News Article Content -->
+<article class="max-w-xl mx-auto space-y-lg">
+<div class="h-64 w-full rounded-xl overflow-hidden shadow-md">
+<img class="w-full h-full object-cover" data-alt="A cinematic, wide-angle shot of a futuristic city skyline during sunset. The architecture is ultra-modern with glass surfaces and hanging gardens. Warm golden light hits the buildings, creating high-contrast shadows. The style is professional and clean, using a palette of deep blues and oranges to match a high-end corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIOmZzBkzC-56RZG-lIxOEyBG4aO0hgD3i-rAjZ7bi2D7RIXEA37JRyWoYG0e7hs1epAAb51axdLVhLNq9EKdUkrTOO8hq-D0qnZZfz-sUJUN-1VTxNTK3JmnzSOaRmHnTVlCIXLJKXLJkGw5yAsp7QGpLAwzVxwaAlk7QrYjQJz9uqIuf2a2awxGkvkDYL5sEEL7P4uW8pJPVQA9QJ8JMjb6y3K4wrd54GYf6HTQDh3w5kYD-GsHZVDh6zyjYweEdEHfic1GOd1Q"/>
+</div>
+<div class="space-y-sm">
+<div class="flex gap-xs">
+<span class="bg-secondary-container text-on-secondary-container px-sm py-xs rounded-full font-label-lg text-label-lg">Politics</span>
+<span class="text-on-surface-variant font-label-lg text-label-lg mt-1">5 min read</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-background leading-tight">
+          New Economic Policy Implementation Expected to Shift Global Markets
+        </h1>
+<div class="flex items-center gap-sm py-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container">
+<img class="w-full h-full rounded-full object-cover" data-alt="A professional headshot of a female journalist with a friendly yet serious expression. Soft studio lighting on a neutral background. The image has a clean, high-resolution finish typical of premium news outlets, focusing on clarity and professional reliability." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkQVqQxSRyDvwuHVooH7H-AeQxVhN-ZVixJ5IYvfA-q4f1hohMsQkbIJPVzHaj94Cc1Lw_Or72Wq46pOpsS6nh2mp2iYZ2Skr5MHaP_EoHzq9e9UiHaEdaVBZvOe1Kn3k67bzqbDTda2zC5q25qg7k5cUAgMA48fAYXfp8w-gcw4M--A0yYo3ETOtd6igh6xSrnz9udTLwum9CoYU1uO8dnkxwlXiUlPQZyQHHjYNeRjKz0prDHi1PfjbrkQN6sy7Uy0tLoWS7ilA"/>
+</div>
+<div>
+<div class="font-label-lg text-label-lg font-bold">Sarah Jenkins</div>
+<div class="font-caption text-caption text-neutral-gray">Lead Financial Analyst</div>
+</div>
+</div>
+</div>
+<div class="space-y-md text-on-surface-variant">
+<p class="font-body-lg text-body-lg">
+          The recent announcement regarding the implementation of the Phase 4 Economic Framework has sent ripples through international financial centers. According to preliminary reports, the policy aims to consolidate trade routes across the northern corridor.
+        </p>
+<p class="font-body-lg text-body-lg">
+          Market analysts have been divided on the potential outcomes. Some argue that the increased transparency will lead to lower friction in cross-border transactions, while others suggest that the regulatory burden might stifle innovation in the short term.
+        </p>
+<div class="bg-surface-container-low p-lg rounded-xl border-l-4 border-primary italic">
+          "This shift represents the most significant change in trade logic we have seen in over two decades," says one senior official who wished to remain anonymous.
+        </div>
+<p class="font-body-lg text-body-lg">
+          As the rollout begins next Monday, all eyes will be on the opening bells of the major exchanges. Initial projections suggest a 4.2% increase in regional manufacturing output, though these figures remain unverified.
+        </p>
+</div>
+</article>
+</main>
+<!-- SCANNING OVERLAY ELEMENTS -->
+<!-- Dimmed Backdrop -->
+<div class="fixed inset-0 bg-on-background/20 backdrop-blur-[1px] pointer-events-none z-10 transition-opacity duration-500"></div>
+<!-- Animated Scanning Line -->
+<div class="fixed inset-x-0 h-40 scanning-line pointer-events-none z-20 border-b border-primary/40 shadow-[0_4px_30px_rgba(0,73,125,0.3)]"></div>
+<!-- Screen Content Highlight Boxes (Subtle AI "detection" hints) -->
+<div class="fixed inset-0 pointer-events-none z-20">
+<div class="absolute top-[45%] left-lg right-lg h-24 border-2 border-primary/20 rounded-xl opacity-0 animate-[pulse_2s_ease-in-out_infinite_0.5s]"></div>
+<div class="absolute top-[68%] left-lg right-[40%] h-12 border-2 border-primary/10 rounded-xl opacity-0 animate-[pulse_3s_ease-in-out_infinite_1.2s]"></div>
+</div>
+<!-- Scanning Feedback UI -->
+<div class="fixed inset-x-0 bottom-3xl flex justify-center items-center px-lg z-30">
+<div class="w-full max-w-sm glass-effect rounded-2xl shadow-xl overflow-hidden border border-surface-variant transform transition-transform animate-[bounce_0.5s_ease-out_1]">
+<div class="p-lg flex flex-col items-center gap-md">
+<!-- Center-aligned Header & Label -->
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary animate-spin" style="animation-duration: 3s">refresh</span>
+<span class="font-label-lg text-label-lg text-primary uppercase tracking-wider font-bold animate-pulse-subtle">
+            Scanning screen content...
+          </span>
+</div>
+<!-- Subtle Progress Bar -->
+<div class="w-full h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary progress-fill rounded-full shadow-[0_0_8px_rgba(0,73,125,0.5)]"></div>
+</div>
+<!-- Meta Info -->
+<div class="flex justify-between w-full font-caption text-caption text-on-surface-variant">
+<span>FactLens AI v2.4</span>
+<span class="text-primary font-bold">78% Analysis Complete</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Header (Persistent Branding) -->
+<div class="fixed top-0 inset-x-0 z-40 px-lg py-sm flex justify-between items-center pointer-events-none">
+<div class="bg-surface-pure-white/90 backdrop-blur-md px-lg py-xs rounded-full shadow-sm flex items-center gap-xs border border-surface-variant pointer-events-auto">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill">security</span>
+<span class="font-headline-sm text-headline-sm font-extrabold text-primary !text-[16px] tracking-tight">FactLens</span>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-pure-white/90 backdrop-blur-md shadow-sm border border-surface-variant flex items-center justify-center pointer-events-auto hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">close</span>
+</button>
+</div>
+<!-- JavaScript for micro-interactions -->
+<script>
+    // Ensure the theme is set to light as requested
+    document.documentElement.classList.add('light');
+    
+    // Simulate interactive dismissal
+    document.querySelector('button').addEventListener('click', () => {
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => {
+        window.history.back();
+      }, 300);
+    });
+
+    // Randomize the detection boxes appearing slightly
+    const boxes = document.querySelectorAll('.fixed.inset-0.pointer-events-none.z-20 > div');
+    setInterval(() => {
+        boxes.forEach(box => {
+            if (Math.random() > 0.7) {
+                box.style.opacity = '1';
+                setTimeout(() => box.style.opacity = '0', 1500);
+            }
+        });
+    }, 2000);
+  </script>
+</body></html>

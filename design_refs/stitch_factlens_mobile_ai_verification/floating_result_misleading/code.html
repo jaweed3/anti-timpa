@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FactLens | Floating Result: Misleading</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bottom-sheet-shadow {
+            box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+        .backdrop-blur-custom {
+            backdrop-filter: blur(8px);
+        }
+        /* Custom drag handle styling */
+        .drag-handle {
+            width: 32px;
+            height: 4px;
+            background-color: #e1e2e8;
+            border-radius: 2px;
+        }
+        body {
+            overflow: hidden; /* Lock background for the overlay demo */
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-surface-variant": "#414750",
+                      "tertiary-fixed-dim": "#ffb784",
+                      "on-tertiary-container": "#ffceaf",
+                      "on-tertiary-fixed": "#301400",
+                      "secondary-fixed": "#9cf5c1",
+                      "tertiary-fixed": "#ffdcc6",
+                      "surface-variant": "#e1e2e8",
+                      "surface-bright": "#f8f9ff",
+                      "surface-container-highest": "#e1e2e8",
+                      "secondary": "#006d44",
+                      "secondary-fixed-dim": "#80d8a6",
+                      "secondary-container": "#99f2be",
+                      "success-emerald": "#006D44",
+                      "tertiary": "#713700",
+                      "neutral-gray": "#74777F",
+                      "surface": "#f8f9ff",
+                      "on-error": "#ffffff",
+                      "error-red": "#BA1A1A",
+                      "surface-pure-white": "#FFFFFF",
+                      "surface-tint": "#0061a4",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed": "#001d36",
+                      "surface-container-high": "#e6e8ee",
+                      "on-secondary-fixed-variant": "#005232",
+                      "primary-container": "#0061a4",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#2e3135",
+                      "outline": "#717782",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#9fcaff",
+                      "inverse-on-surface": "#eff0f7",
+                      "inverse-primary": "#9fcaff",
+                      "background": "#f8f9ff",
+                      "on-secondary-fixed": "#002111",
+                      "on-secondary": "#ffffff",
+                      "on-primary-fixed-variant": "#00497d",
+                      "on-background": "#191c20",
+                      "on-primary-container": "#c0dbff",
+                      "primary": "#00497d",
+                      "on-tertiary-fixed-variant": "#713700",
+                      "on-primary": "#ffffff",
+                      "on-secondary-container": "#0a7148",
+                      "surface-container": "#eceef4",
+                      "on-surface": "#191c20",
+                      "tertiary-container": "#944a00",
+                      "surface-container-low": "#f2f3fa",
+                      "primary-fixed": "#d1e4ff",
+                      "outline-variant": "#c1c7d2",
+                      "warning-amber": "#924C00",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-dim": "#d8dae0",
+                      "on-error-container": "#93000a",
+                      "background-almost-white": "#FDFBFF"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "12px",
+                      "xs": "4px",
+                      "xl": "24px",
+                      "sm": "8px",
+                      "lg": "16px",
+                      "3xl": "48px",
+                      "2xl": "32px"
+              },
+              "fontFamily": {
+                      "headline-sm": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "caption": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "title-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "400"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                      "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                      "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.4px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}],
+                      "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0.15px", "fontWeight": "500"}],
+                      "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-almost-white font-body-md text-on-surface">
+<!-- TOP 65%: Underlying App Mockup (Social Feed) -->
+<div class="h-[574px] w-full overflow-hidden bg-surface p-lg">
+<!-- Top App Bar Mockup -->
+<header class="flex justify-between items-center h-14 mb-lg">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="font-headline-sm text-headline-sm font-bold text-primary">FactLens</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+</header>
+<!-- Mock Content: Social Post -->
+<div class="bg-surface-pure-white rounded-xl p-lg shadow-sm mb-lg">
+<div class="flex items-center gap-sm mb-md">
+<div class="w-10 h-10 rounded-full bg-surface-container">
+<img class="w-full h-full rounded-full object-cover" data-alt="A professional studio portrait of a tech-savvy news journalist in a minimalist setting. The lighting is soft and high-key, aligning with a corporate modern aesthetic. The background is a clean, neutral gray with subtle geometric shadows, maintaining a focused and professional mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzMbLlXvQB9LNOBDU9vZlG8G93bReDjdE9Xy8g6Wj6-pHAgSdO-u117FciSEaS7KJMDyxvuQJa3V9Ri1v_1eDvAcqhsgmtI28EXhC2KSKNjSI4hemqth0Zo8TnAQLdM6IhWwCqV1HLuYxDqUnYHNBIPXx6RQzfsAFWlZEEIP0kQ-nivTMcJ_bKZU6bD9rjPooF7_iGbOFM39W0PFuLbPl7m5oMIVTMAGDAZEMaexrww4soGNHizziRW3Rzhe86aaQ_ICXT9oaBJyY"/>
+</div>
+<div>
+<div class="font-title-md text-title-md">Global Insider</div>
+<div class="font-caption text-caption text-outline">2 hours ago</div>
+</div>
+</div>
+<p class="font-body-lg text-body-lg mb-md leading-relaxed">
+                Breaking: New legislation introduced today suggests a complete ban on all traditional banking within the next six months to facilitate a digital-only economy transition. Experts warn of immediate market volatility.
+            </p>
+<div class="w-full h-48 rounded-lg bg-surface-container relative overflow-hidden mb-md">
+<img class="w-full h-full object-cover" data-alt="A highly detailed 3D digital illustration of a futuristic, minimalist bank vault door being replaced by a glowing digital interface. The color palette is dominated by professional blues and clean whites, with soft atmospheric lighting. The style is modern and corporate, emphasizing high-speed information processing and digital reliability." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL2r5Hrsd9fNW1nzeHd5y4M5NZRi9SIVEIzmBRXuHA_iVwZMwIz-29UbUAAiZ9NRXOL8MDYEvhAZTQzlmuUdnxwHayc6vMsX6IzLvbaVXs1znQZY_gl-jUu7XG2CbK-xqmM1nFPlgAm_2MboJl1MQ7358enU56R8ojdklCw8SLhlBaJxWMVuMFPs81oJAEjIv8io6emk1veF4-WfCWFzuGjlt76VVStX21Ve1rWh6fZ8duGSnlbllokMdgJk2pr0PuF4MXr17aAl4"/>
+<div class="absolute inset-0 bg-primary/10 backdrop-blur-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl">fact_check</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SEMANTIC OVERLAY: Backdrop Dimming -->
+<div class="fixed inset-0 bg-on-background/20 z-40 transition-opacity duration-300"></div>
+<!-- BOTTOM 35%: OverlayCard (FactLens Sheet) -->
+<section class="fixed bottom-0 left-0 right-0 h-[309px] bg-surface-pure-white rounded-t-[28px] z-50 bottom-sheet-shadow flex flex-col transform transition-transform duration-500 ease-out">
+<!-- Drag Handle / Header -->
+<div class="flex flex-col items-center pt-sm pb-xs cursor-grab active:cursor-grabbing">
+<div class="drag-handle"></div>
+</div>
+<!-- Content Canvas -->
+<div class="px-lg pb-safe flex-1 overflow-y-auto">
+<!-- Headline & Verdict Row -->
+<div class="flex items-center justify-between mt-sm mb-md">
+<div class="flex items-center gap-sm">
+<div class="bg-warning-amber/10 text-warning-amber rounded-lg p-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<h2 class="font-title-lg text-title-lg font-bold">Misleading</h2>
+</div>
+<!-- Confidence Badge -->
+<div class="bg-surface-container-high px-md py-xs rounded-full flex items-center gap-xs">
+<span class="font-label-lg text-label-lg text-on-surface-variant">Confidence:</span>
+<span class="font-label-lg text-label-lg font-bold text-primary">72%</span>
+</div>
+</div>
+<!-- AI Summary Card -->
+<div class="bg-surface-container-low rounded-xl p-md mb-lg border border-outline-variant/30">
+<p class="font-body-md text-body-md text-on-surface-variant leading-normal">
+                    This claim contains a kernels of truth but omits critical context. The legislation proposes a digital framework <span class="font-bold text-on-surface">voluntary pilot</span>, not a mandatory ban on traditional banking.
+                </p>
+</div>
+<!-- Action Area -->
+<div class="flex gap-md mt-auto">
+<button class="flex-1 h-12 bg-primary text-on-primary font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-sm hover:opacity-90 active:scale-95 transition-all">
+<span>View Full Details</span>
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+<button class="w-12 h-12 border border-outline-variant rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Invisible Bottom Nav Shell (Suppressed as per rules for Task-Focused UI, but structure kept for spacing context if needed) -->
+<script>
+        // Simple micro-interaction for the bottom sheet
+        document.addEventListener('DOMContentLoaded', () => {
+            const sheet = document.querySelector('section');
+            const backdrop = document.querySelector('.fixed.inset-0.bg-on-background\\/20');
+            
+            // Initial animation in
+            sheet.style.transform = 'translateY(100%)';
+            backdrop.style.opacity = '0';
+            
+            setTimeout(() => {
+                sheet.style.transform = 'translateY(0)';
+                backdrop.style.opacity = '1';
+            }, 100);
+
+            // Optional: Close interaction on backdrop click
+            backdrop.addEventListener('click', () => {
+                sheet.style.transform = 'translateY(100%)';
+                backdrop.style.opacity = '0';
+                setTimeout(() => {
+                    // Logic to actually dismiss or go back
+                }, 300);
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#f2f3fa",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#99f2be",
+                        "on-tertiary-fixed-variant": "#713700",
+                        "tertiary": "#713700",
+                        "primary-fixed-dim": "#9fcaff",
+                        "surface-bright": "#f8f9ff",
+                        "background-almost-white": "#FDFBFF",
+                        "on-background": "#191c20",
+                        "success-emerald": "#006D44",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c1c7d2",
+                        "secondary": "#006d44",
+                        "neutral-gray": "#74777F",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#ffdcc6",
+                        "error-red": "#BA1A1A",
+                        "primary-fixed": "#d1e4ff",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#944a00",
+                        "surface-pure-white": "#FFFFFF",
+                        "inverse-on-surface": "#eff0f7",
+                        "on-primary-container": "#c0dbff",
+                        "on-primary-fixed-variant": "#00497d",
+                        "background": "#f8f9ff",
+                        "on-surface": "#191c20",
+                        "inverse-primary": "#9fcaff",
+                        "on-secondary-container": "#0a7148",
+                        "outline": "#717782",
+                        "secondary-fixed-dim": "#80d8a6",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#d8dae0",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-container": "#ffceaf",
+                        "warning-amber": "#924C00",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eceef4",
+                        "surface-container-high": "#e6e8ee",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#0061a4",
+                        "primary": "#00497d",
+                        "on-primary-fixed": "#001d36",
+                        "on-secondary-fixed": "#002111",
+                        "tertiary-fixed-dim": "#ffb784",
+                        "on-tertiary-fixed": "#301400",
+                        "on-surface-variant": "#414750",
+                        "on-secondary-fixed-variant": "#005232",
+                        "secondary-fixed": "#9cf5c1",
+                        "inverse-surface": "#2e3135",
+                        "surface-container-highest": "#e1e2e8",
+                        "surface-tint": "#0061a4",
+                        "surface-variant": "#e1e2e8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sm": "8px",
+                        "xl": "24px",
+                        "lg": "16px",
+                        "3xl": "48px",
+                        "md": "12px",
+                        "2xl": "32px"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.4px", "fontWeight": "400"}],
+                        "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0.15px", "fontWeight": "500"}],
+                        "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                        "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                        "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-almost-white text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-background-almost-white flex justify-between items-center w-full px-lg py-sm h-14">
+<div class="flex items-center gap-md">
+<button class="p-xs rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-lg text-title-lg font-bold text-primary">Verification Result</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex-1 px-lg pt-lg pb-32">
+<!-- Verdict Section (FactCard) -->
+<section class="mb-2xl">
+<div class="bg-surface-pure-white rounded-xl shadow-sm overflow-hidden border border-surface-container-high">
+<div class="bg-success-emerald px-lg py-xl flex flex-col items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-[48px] mb-sm" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+<h2 class="font-headline-lg text-headline-lg font-extrabold uppercase tracking-tight">Supported</h2>
+<div class="mt-sm bg-white/20 px-md py-xs rounded-full backdrop-blur-sm">
+<span class="font-label-lg text-label-lg">Confidence Score: 98%</span>
+</div>
+</div>
+<div class="p-lg">
+<h3 class="font-title-md text-title-md text-on-surface mb-sm">AI Summary</h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                        This claim is highly supported by current scientific consensus and official documentation. Cross-referencing multiple verified datasets confirms the temporal trends and statistical significance mentioned in the query.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Evidence Section -->
+<section class="mb-lg">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-title-lg text-title-lg font-bold text-on-background">Evidence Sources</h3>
+<span class="font-label-lg text-label-lg text-primary">3 Found</span>
+</div>
+<div class="flex flex-col gap-md">
+<!-- EvidenceCard 1 -->
+<div class="bg-surface-pure-white p-lg rounded-xl shadow-sm border border-surface-container-high">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h4 class="font-title-md text-title-md text-on-surface font-bold">NASA Climate Study</h4>
+<span class="font-caption text-caption text-secondary flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="language">language</span>
+                                nasa.gov
+                            </span>
+</div>
+<div class="bg-success-emerald/10 text-success-emerald px-sm py-xs rounded-lg font-label-lg text-label-lg">
+                            99% Match
+                        </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">
+                        Detailed analysis of global surface temperature changes over the last decade, showing a consistent upward trend across all recorded stations.
+                    </p>
+<button class="w-full h-12 flex items-center justify-center gap-sm border border-outline text-primary font-label-lg text-label-lg rounded-xl hover:bg-surface-container-low transition-colors">
+                        Open Source
+                        <span class="material-symbols-outlined text-[18px]" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+<!-- EvidenceCard 2 -->
+<div class="bg-surface-pure-white p-lg rounded-xl shadow-sm border border-surface-container-high">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h4 class="font-title-md text-title-md text-on-surface font-bold">NOAA Arctic Report Card</h4>
+<span class="font-caption text-caption text-secondary flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="language">language</span>
+                                noaa.gov
+                            </span>
+</div>
+<div class="bg-success-emerald/10 text-success-emerald px-sm py-xs rounded-lg font-label-lg text-label-lg">
+                            96% Match
+                        </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">
+                        Annual update on the state of the Arctic, highlighting the rapid decrease in sea ice and its impact on global weather patterns.
+                    </p>
+<button class="w-full h-12 flex items-center justify-center gap-sm border border-outline text-primary font-label-lg text-label-lg rounded-xl hover:bg-surface-container-low transition-colors">
+                        Open Source
+                        <span class="material-symbols-outlined text-[18px]" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+<!-- EvidenceCard 3 -->
+<div class="bg-surface-pure-white p-lg rounded-xl shadow-sm border border-surface-container-high">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h4 class="font-title-md text-title-md text-on-surface font-bold">Nature Climate Journal</h4>
+<span class="font-caption text-caption text-secondary flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="article">article</span>
+                                nature.com
+                            </span>
+</div>
+<div class="bg-success-emerald/10 text-success-emerald px-sm py-xs rounded-lg font-label-lg text-label-lg">
+                            94% Match
+                        </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">
+                        Peer-reviewed publication discussing the socio-economic impacts of climate change in emerging coastal economies.
+                    </p>
+<button class="w-full h-12 flex items-center justify-center gap-sm border border-outline text-primary font-label-lg text-label-lg rounded-xl hover:bg-surface-container-low transition-colors">
+                        Open Source
+                        <span class="material-symbols-outlined text-[18px]" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Actions Layer -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest/80 backdrop-blur-md px-lg py-md safe-bottom shadow-[0_-4px_16px_rgba(0,0,0,0.05)] border-t border-surface-container-high flex gap-md">
+<button class="flex-1 h-12 bg-primary text-on-primary rounded-xl font-label-lg text-label-lg flex items-center justify-center gap-sm active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+            Save Result
+        </button>
+<button class="flex-1 h-12 border border-outline text-primary rounded-xl font-label-lg text-label-lg flex items-center justify-center gap-sm active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+            Share
+        </button>
+</div>
+<!-- Background Decoration for high-end feel -->
+<div class="fixed inset-0 -z-10 opacity-30 pointer-events-none overflow-hidden">
+<div class="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-secondary-container rounded-full blur-[100px]"></div>
+<div class="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-primary-fixed rounded-full blur-[80px]"></div>
+</div>
+<script>
+        // Micro-interaction for feedback
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const label = btn.innerText.trim();
+                if(label === 'Save Result') {
+                    const icon = btn.querySelector('.material-symbols-outlined');
+                    icon.innerText = 'check_circle';
+                    btn.classList.replace('bg-primary', 'bg-success-emerald');
+                    btn.innerText = 'Saved';
+                    btn.prepend(icon);
+                    setTimeout(() => {
+                        icon.innerText = 'bookmark';
+                        btn.classList.replace('bg-success-emerald', 'bg-primary');
+                        btn.innerText = 'Save Result';
+                        btn.prepend(icon);
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+</body></html>

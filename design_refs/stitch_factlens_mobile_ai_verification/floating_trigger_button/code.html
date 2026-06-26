@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Floating Trigger Button</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#414750",
+                    "tertiary-fixed-dim": "#ffb784",
+                    "on-tertiary-container": "#ffceaf",
+                    "on-tertiary-fixed": "#301400",
+                    "secondary-fixed": "#9cf5c1",
+                    "tertiary-fixed": "#ffdcc6",
+                    "surface-variant": "#e1e2e8",
+                    "surface-bright": "#f8f9ff",
+                    "surface-container-highest": "#e1e2e8",
+                    "secondary": "#006d44",
+                    "secondary-fixed-dim": "#80d8a6",
+                    "secondary-container": "#99f2be",
+                    "success-emerald": "#006D44",
+                    "tertiary": "#713700",
+                    "neutral-gray": "#74777F",
+                    "surface": "#f8f9ff",
+                    "on-error": "#ffffff",
+                    "error-red": "#BA1A1A",
+                    "surface-pure-white": "#FFFFFF",
+                    "surface-tint": "#0061a4",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#001d36",
+                    "surface-container-high": "#e6e8ee",
+                    "on-secondary-fixed-variant": "#005232",
+                    "primary-container": "#0061a4",
+                    "on-tertiary": "#ffffff",
+                    "inverse-surface": "#2e3135",
+                    "outline": "#717782",
+                    "error": "#ba1a1a",
+                    "primary-fixed-dim": "#9fcaff",
+                    "inverse-on-surface": "#eff0f7",
+                    "inverse-primary": "#9fcaff",
+                    "background": "#f8f9ff",
+                    "on-secondary-fixed": "#002111",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#00497d",
+                    "on-background": "#191c20",
+                    "on-primary-container": "#c0dbff",
+                    "primary": "#00497d",
+                    "on-tertiary-fixed-variant": "#713700",
+                    "on-primary": "#ffffff",
+                    "on-secondary-container": "#0a7148",
+                    "surface-container": "#eceef4",
+                    "on-surface": "#191c20",
+                    "tertiary-container": "#944a00",
+                    "surface-container-low": "#f2f3fa",
+                    "primary-fixed": "#d1e4ff",
+                    "outline-variant": "#c1c7d2",
+                    "warning-amber": "#924C00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#d8dae0",
+                    "on-error-container": "#93000a",
+                    "background-almost-white": "#FDFBFF"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "12px",
+                    "xs": "4px",
+                    "xl": "24px",
+                    "sm": "8px",
+                    "lg": "16px",
+                    "3xl": "48px",
+                    "2xl": "32px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "caption": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                    "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400"}],
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.4px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400"}],
+                    "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0.15px", "fontWeight": "500"}],
+                    "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            user-select: none;
+        }
+        .fab-pulse {
+            animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(.7); opacity: 0.8; }
+            50% { opacity: 0.4; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .system-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface overflow-hidden">
+<!-- Mock Android Host Application (News Feed) -->
+<main class="relative h-screen w-full overflow-y-auto bg-surface-container-lowest">
+<!-- Mock Status Bar -->
+<div class="fixed top-0 w-full h-8 flex justify-between items-center px-lg bg-surface-container-lowest z-40">
+<span class="text-caption font-label-lg">9:41</span>
+<div class="flex gap-xs items-center">
+<span class="material-symbols-outlined text-[16px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+<span class="material-symbols-outlined text-[16px]">battery_full</span>
+</div>
+</div>
+<!-- News Content Header -->
+<header class="pt-10 px-lg pb-md border-b border-surface-variant">
+<h1 class="font-headline-lg text-headline-lg-mobile text-on-surface font-bold leading-tight">
+                Global Markets React to New Sustainable Tech Regulation
+            </h1>
+<div class="flex items-center gap-sm mt-md">
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a middle-aged female journalist with glasses, photographed in a well-lit studio. The lighting is soft and corporate, matching a clean white-mode aesthetic. The composition is focused on her face, conveying expertise and professional authority." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfDHjBt3rbfCtXnvufAR3fPqqeqeWEnOIbI4IPBjSrPViD6MwLY13oMMM_nzHmRX41EMgg8RqQnEt9FMj6PwBjb0NzlyNLluQfamqpbjnfiPvwi3_2CZVu3ZWtRfJt5uNef2SqkS2UYSxSHNo8qiyLrf49NM_dBV8Uh_77DaKUPgIURr5DXTpfxCQ3OLgPxb5MLZHHWme7-SUr7rLNhbCiUQq812_PhH13QtfY6SsUt31Zbl_g_Io5YPrqQogcxq_Jm8_cMo5I6WQ"/>
+</div>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Sarah Jenkins</span>
+<span class="font-caption text-caption text-on-surface-variant">4 min read • Updated 12m ago</span>
+</div>
+</div>
+</header>
+<!-- Article Content -->
+<article class="px-lg py-xl space-y-lg">
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                The international financial landscape shifted significantly this morning as regulators announced a comprehensive framework for sustainable technology investment. The move, which aims to standardize "green" claims, has sent shockwaves through major tech hubs from San Francisco to Tokyo.
+            </p>
+<div class="relative w-full aspect-video rounded-xl overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A futuristic skyline of a smart city at dawn, showing sustainable architecture with vertical gardens and solar-integrated glass facades. The lighting is high-key and optimistic, with a soft blue and white color palette. The scene is crisp and modern, reflecting an AI-first corporate vision of the future." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUlhirnd7OArZ5VGd0Y4V0oWy7kwBQ7acII-v2yDZGJC7vcjww5Ekj2vZuvwW-ReQx9FnhSRfp65zXF2_ry4DTxUpMlKOJEuXHWz5hvpcpT4R447cbwgtgvoblBLDUj91Q616QnjRuK497i2lpa65ItpW-r5F5JrYBVsDYTW4RioeBOYApN6Uy3Rlo_LoBnkmt-5urOwC_mp-nZDYQS85PovERBs7Ar4YVbw93NII9V-ZYiHd71axMtF70tN9Y47EbyuCJRWFcPWA"/>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                Initial reports suggest that the new oversight body will utilize automated verification systems to monitor corporate compliance. Critics argue the timeline is aggressive, while supporters claim the transparency is long overdue for a sector prone to "greenwashing" and unsubstantiated claims of environmental impact.
+            </p>
+<div class="p-lg bg-surface-container-low rounded-xl border-l-4 border-primary">
+<p class="font-title-md text-title-md italic text-primary">
+                    "This isn't just about regulation; it's about building a digital infrastructure of truth that investors can actually rely on."
+                </p>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                As the market digests these developments, analysts are looking at the 'FactLens' protocol as a potential standard for real-time verification. 
+            </p>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed pb-32">
+                Market volatility remained high through the afternoon session, with major indices seeing fluctuations of up to 2.4% as the details of the 400-page document began to circulate among institutional traders. Experts warn that the full impact may not be visible until the next quarterly reporting cycle.
+            </p>
+</article>
+</main>
+<!-- Overlay Layer (FactLens UI) -->
+<div class="fixed inset-0 pointer-events-none z-50" id="overlay-container">
+<!-- THE FAB (Floating Trigger Button) -->
+<div class="pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 flex items-center group cursor-grab active:cursor-grabbing select-none" id="factlens-fab" style="touch-action: none;">
+<!-- Pulse Effect -->
+<div class="fab-pulse absolute right-2 w-14 h-14 bg-primary rounded-full opacity-20"></div>
+<!-- Drag Handle / Docking Indicator -->
+<div class="w-1.5 h-10 bg-primary/20 rounded-l-full mr-xs transition-opacity duration-300 opacity-0 group-hover:opacity-100"></div>
+<!-- The Core Button -->
+<button aria-label="Activate FactLens" class="relative w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 translate-x-2" id="fab-button">
+<!-- Brand Icon -->
+<span class="material-symbols-outlined text-on-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">security</span>
+<!-- Tiny "New" Badge -->
+<div class="absolute -top-1 -right-1 w-4 h-4 bg-error rounded-full border-2 border-surface-pure-white flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-on-error rounded-full animate-ping"></div>
+</div>
+</button>
+</div>
+<!-- Tooltip/Label (Appears on hover) -->
+<div class="absolute right-20 top-1/2 -translate-y-1/2 bg-inverse-surface text-inverse-on-surface px-md py-xs rounded-lg text-label-lg font-label-lg shadow-lg opacity-0 transition-opacity pointer-events-none" id="fab-tooltip">
+            Verify Content
+        </div>
+</div>
+<!-- Interactive Script for FAB behavior -->
+<script>
+        const fab = document.getElementById('factlens-fab');
+        const tooltip = document.getElementById('fab-tooltip');
+        const button = document.getElementById('fab-button');
+        let isDragging = false;
+        let startY;
+        let currentY = window.innerHeight / 2;
+
+        // Position tooltip relative to FAB
+        function updateTooltipPosition() {
+            const rect = fab.getBoundingClientRect();
+            tooltip.style.top = `${rect.top + rect.height/2}px`;
+        }
+
+        // Mouse/Touch interaction logic
+        fab.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('mouseup', endDrag);
+
+        fab.addEventListener('touchstart', (e) => {
+            startDrag(e.touches[0]);
+        }, { passive: false });
+        
+        window.addEventListener('touchmove', (e) => {
+            drag(e.touches[0]);
+        }, { passive: false });
+        
+        window.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            startY = e.clientY - fab.offsetTop;
+            button.classList.add('scale-105');
+            tooltip.classList.remove('opacity-100');
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            // Constrain within screen bounds
+            let y = e.clientY - startY;
+            const buffer = 80;
+            y = Math.max(buffer, Math.min(y, window.innerHeight - buffer));
+            
+            fab.style.top = `${y}px`;
+            updateTooltipPosition();
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            button.classList.remove('scale-105');
+            
+            // Snap to side or logic here
+        }
+
+        // Hover effect for Tooltip
+        fab.addEventListener('mouseenter', () => {
+            if (!isDragging) {
+                tooltip.classList.add('opacity-100');
+                updateTooltipPosition();
+            }
+        });
+        fab.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('opacity-100');
+        });
+
+        // Click interaction
+        button.addEventListener('click', () => {
+            // Ripple effect logic
+            const ripple = document.createElement('div');
+            ripple.className = 'absolute inset-0 bg-on-primary/20 rounded-full animate-ping';
+            button.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 1000);
+            
+            console.log("FactLens FAB triggered. Expanding to FactCard...");
+        });
+    </script>
+</body></html>
