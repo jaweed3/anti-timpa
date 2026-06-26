@@ -1,26 +1,18 @@
 package com.factlens.overlay
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
 import android.view.WindowManager
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.factlens.model.Source
+import com.factlens.ui.screens.FloatingResultOverlay
 
 object ResultOverlayHelper {
 
@@ -39,11 +31,24 @@ object ResultOverlayHelper {
 
         val composeView = ComposeView(context).apply {
             setContent {
-                ResultCard(
-                    explanation = explanation,
+                FloatingResultOverlay(
                     verdict = verdict,
                     confidence = confidence,
-                    sources = sources,
+                    explanation = explanation,
+                    hasDetail = sources.isNotEmpty(),
+                    onViewDetails = {
+                        val intent = context.packageManager.getLaunchIntentForPackage(
+                            context.packageName
+                        )
+                        if (intent != null) {
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            intent.putExtra("open_scan_result", true)
+                            context.startActivity(intent)
+                        }
+                        dismiss()
+                    },
+                    onBookmark = { /* TODO: toggle favorite */ },
                     onDismiss = { dismiss() }
                 )
             }
@@ -51,7 +56,7 @@ object ResultOverlayHelper {
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
@@ -63,8 +68,8 @@ object ResultOverlayHelper {
         ).apply {
             gravity = Gravity.BOTTOM
             dimAmount = 0.3f
-            x = 0
-            y = 0
+            width = WindowManager.LayoutParams.MATCH_PARENT
+            height = WindowManager.LayoutParams.MATCH_PARENT
         }
 
         currentView = composeView
@@ -78,111 +83,6 @@ object ResultOverlayHelper {
                 wm.removeView(view)
             } catch (_: Exception) {}
             currentView = null
-        }
-    }
-}
-
-@Composable
-fun ResultCard(
-    explanation: String,
-    verdict: String,
-    confidence: Double,
-    sources: List<Source>,
-    onDismiss: () -> Unit
-) {
-    val verdictColor = when (verdict.lowercase()) {
-        "supported" -> Color(0xFF4CAF50)
-        "contradicted" -> Color(0xFFF44336)
-        "misleading" -> Color(0xFFFF9800)
-        "mixed" -> Color(0xFF9C27B0)
-        "insufficient evidence" -> Color(0xFF607D8B)
-        else -> Color(0xFF9E9E9E)
-    }
-
-    val surfaceColor = Color(0xFF1A1A2E)
-    val textColor = Color.White
-    val secondaryText = Color(0xFFB0B0B0)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clickable { /* prevent dismiss on tap */ },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("FactLens", color = Color(0xFF6C63FF), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    text = "✕",
-                    color = secondaryText,
-                    fontSize = 20.sp,
-                    modifier = Modifier.clickable { onDismiss() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Verdict
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(verdictColor)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = verdict.uppercase(),
-                    color = verdictColor,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "${(confidence * 100).toInt()}%",
-                    color = verdictColor,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Explanation
-            Text(
-                text = explanation,
-                color = textColor,
-                fontSize = 14.sp,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp
-            )
-
-            // Sources
-            if (sources.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("Sources", color = secondaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Spacer(modifier = Modifier.height(4.dp))
-                sources.take(3).forEach { source ->
-                    Text(
-                        text = source.title,
-                        color = Color(0xFF6C63FF),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
         }
     }
 }

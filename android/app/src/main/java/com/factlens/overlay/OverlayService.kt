@@ -10,36 +10,33 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
-import com.factlens.R
 import com.factlens.capture.ScreenCaptureManager
 
 class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
-    private var captureCallback: ScreenCaptureManager.CaptureCallback? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -79,10 +76,12 @@ class OverlayService : Service() {
     private fun showOverlay() {
         val composeView = ComposeView(this).apply {
             setContent {
-                FloatingButton {
-                    val manager = ScreenCaptureManager(this@OverlayService)
-                    manager.requestCapture(this@OverlayService)
-                }
+                FloatingTriggerButton(
+                    onTap = {
+                        val manager = ScreenCaptureManager(this@OverlayService)
+                        manager.requestCapture(this@OverlayService)
+                    }
+                )
             }
         }
 
@@ -104,7 +103,6 @@ class OverlayService : Service() {
 
         overlayView = composeView
         windowManager.addView(composeView, params)
-
         setupDraggable(composeView, params)
     }
 
@@ -147,20 +145,69 @@ class OverlayService : Service() {
 }
 
 @Composable
-fun FloatingButton(onTap: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF6C63FF))
-            .clickable { onTap() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "F",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+fun FloatingTriggerButton(onTap: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulseScale"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = EaseInOutCubic),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulseAlpha"
+    )
+
+    Box {
+        // Pulse ring
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .scale(pulseScale)
+                .clip(CircleShape)
+                .background(Color(0xFF00497D).copy(alpha = pulseAlpha * 0.3f))
         )
+
+        // Core button
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF00497D))
+                .clickable { onTap() },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "security",
+                color = Color.White,
+                fontSize = 28.sp
+            )
+        }
+
+        // New badge
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 2.dp, y = (-2).dp)
+                .size(16.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFBA1A1A))
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .align(Alignment.Center)
+            )
+        }
     }
 }
