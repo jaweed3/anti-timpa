@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import com.factlens.model.Source
 import com.factlens.ui.screens.FloatingResultOverlay
+import com.factlens.ui.theme.FactLensTheme
 
 object ResultOverlayHelper {
 
@@ -31,7 +32,8 @@ object ResultOverlayHelper {
 
         val composeView = ComposeView(context).apply {
             setContent {
-                FloatingResultOverlay(
+                FactLensTheme {
+                    FloatingResultOverlay(
                     verdict = verdict,
                     confidence = confidence,
                     explanation = explanation,
@@ -51,6 +53,7 @@ object ResultOverlayHelper {
                     onBookmark = { /* TODO: toggle favorite */ },
                     onDismiss = { dismiss() }
                 )
+                }
             }
         }
 
