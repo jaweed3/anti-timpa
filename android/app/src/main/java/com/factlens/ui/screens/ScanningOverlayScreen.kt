@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +40,6 @@ fun ScanningOverlayContent(
             .fillMaxSize()
             .background(FactLensColors.background)
     ) {
-        // Branding header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -62,12 +64,17 @@ fun ScanningOverlayContent(
                     .background(FactLensColors.surfacePureWhite.copy(alpha = 0.9f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("close", fontSize = 20.sp, color = FactLensColors.onSurfaceVariant,
-                    modifier = Modifier.clickable { onDismiss() })
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = FactLensColors.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onDismiss() }
+                )
             }
         }
 
-        // Scanning feedback card
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -90,10 +97,11 @@ fun ScanningOverlayContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                "refresh",
-                                fontSize = 20.sp,
-                                color = FactLensColors.primary
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = null,
+                                tint = FactLensColors.primary,
+                                modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(Spacing.sm))
                             Text(
@@ -107,7 +115,6 @@ fun ScanningOverlayContent(
 
                         Spacer(Modifier.height(Spacing.md))
 
-                        // Progress bar
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

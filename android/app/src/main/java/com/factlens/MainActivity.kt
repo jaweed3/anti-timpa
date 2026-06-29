@@ -9,27 +9,38 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.factlens.capture.ScreenCaptureManager
 import com.factlens.overlay.OverlayService
-import com.factlens.ui.screens.HistoryScreen
-import com.factlens.ui.screens.HomeScreen
-import com.factlens.ui.screens.ScanResultScreen
+import com.factlens.ui.screens.*
 import com.factlens.ui.theme.FactLensColors
 import com.factlens.ui.theme.FactLensTheme
 import com.factlens.ui.theme.Spacing
@@ -37,12 +48,12 @@ import com.factlens.ui.theme.Spacing
 class MainActivity : ComponentActivity() {
 
     val overlayPermissionLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-    ) { /* check manually */ }
+        ActivityResultContracts.StartActivityForResult()
+    ) { }
 
     private val notificationPermissionLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { /* granted or not */ }
+        ActivityResultContracts.RequestPermission()
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,21 +62,54 @@ class MainActivity : ComponentActivity() {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        if (Settings.canDrawOverlays(this)) {
+            val intent = Intent(this, OverlayService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
+
         setContent {
             FactLensTheme {
                 MainApp(this)
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
 }
+
+data class ScanResultData(
+    val verdict: String,
+    val confidence: Double,
+    val explanation: String,
+    val sources: List<com.factlens.model.Source>
+)
 
 @Composable
 fun MainApp(activity: MainActivity) {
-    var currentScreen by remember { mutableStateOf("home") }
+    var currentScreen by remember { mutableStateOf(if (Settings.canDrawOverlays(activity)) "home" else "setup") }
     var hasOverlayPermission by remember {
         mutableStateOf(Settings.canDrawOverlays(activity))
     }
     var isServiceRunning by remember { mutableStateOf(false) }
+    var scanResult by remember { mutableStateOf<ScanResultData?>(null) }
+
+    val captureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { }
+
+    LaunchedEffect(activity) {
+        if (activity.intent.getBooleanExtra("trigger_capture", false)) {
+            activity.intent.removeExtra("trigger_capture")
+            com.factlens.capture.ScreenCaptureManager(activity).requestCapture(activity)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
@@ -102,10 +146,20 @@ fun MainApp(activity: MainActivity) {
                     onNavigate = { currentScreen = it },
                     content = {
                         HomeScreen(
-                            onQuickScan = { currentScreen = "scan_result" },
+                            onQuickScan = {
+                                scanResult = null
+                                currentScreen = "scanning"
+                            },
                             onScanResult = { currentScreen = "scan_result" },
                             onViewAllHistory = { currentScreen = "history" }
                         )
+                    }
+                )
+            }
+            "scanning" -> {
+                ScanningScreen(
+                    onScanComplete = {
+                        currentScreen = "scan_result"
                     }
                 )
             }
@@ -120,16 +174,53 @@ fun MainApp(activity: MainActivity) {
                     }
                 )
             }
-            "scan_result" -> {
-                ScanResultScreen(
-                    onBack = { currentScreen = "home" },
-                    onOpenSource = { url ->
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            activity.startActivity(intent)
-                        } catch (_: Exception) {}
+            "saved" -> {
+                MainScaffold(
+                    currentScreen = currentScreen,
+                    onNavigate = { currentScreen = it },
+                    content = {
+                        SavedScreen(
+                            onScanResult = { currentScreen = "scan_result" }
+                        )
                     }
                 )
+            }
+            "settings" -> {
+                MainScaffold(
+                    currentScreen = currentScreen,
+                    onNavigate = { currentScreen = it },
+                    content = {
+                        SettingsScreen(
+                            hasOverlayPermission = hasOverlayPermission,
+                            onRequestOverlay = {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${activity.packageName}")
+                                )
+                                activity.overlayPermissionLauncher.launch(intent)
+                            }
+                        )
+                    }
+                )
+            }
+            "scan_result" -> {
+                scanResult?.let { result ->
+                    ScanResultScreen(
+                        scanResult = result,
+                        onBack = {
+                            currentScreen = "home"
+                            scanResult = null
+                        },
+                        onOpenSource = { url ->
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                activity.startActivity(intent)
+                            } catch (_: Exception) {}
+                        }
+                    )
+                } ?: run {
+                    currentScreen = "home"
+                }
             }
         }
     }
@@ -146,7 +237,6 @@ fun MainScaffold(
             content()
         }
 
-        // Bottom Nav Bar
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = FactLensColors.surfaceContainerLowest,
@@ -159,29 +249,29 @@ fun MainScaffold(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NavItem(
-                    icon = "home",
+                BottomNavItem(
+                    icon = Icons.Filled.Home,
                     label = "Home",
                     selected = currentScreen == "home",
                     onClick = { onNavigate("home") }
                 )
-                NavItem(
-                    icon = "history",
+                BottomNavItem(
+                    icon = Icons.Filled.History,
                     label = "History",
                     selected = currentScreen == "history",
                     onClick = { onNavigate("history") }
                 )
-                NavItem(
-                    icon = "bookmark",
+                BottomNavItem(
+                    icon = Icons.Filled.Bookmark,
                     label = "Saved",
-                    selected = false,
-                    onClick = {}
+                    selected = currentScreen == "saved",
+                    onClick = { onNavigate("saved") }
                 )
-                NavItem(
-                    icon = "settings",
+                BottomNavItem(
+                    icon = Icons.Filled.Settings,
                     label = "Settings",
-                    selected = false,
-                    onClick = {}
+                    selected = currentScreen == "settings",
+                    onClick = { onNavigate("settings") }
                 )
             }
         }
@@ -189,7 +279,12 @@ fun MainScaffold(
 }
 
 @Composable
-fun NavItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
+fun BottomNavItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     val bg = if (selected) FactLensColors.secondaryContainer else Color.Transparent
     val fg = if (selected) FactLensColors.onSecondaryContainer else FactLensColors.onSurfaceVariant
 
@@ -201,10 +296,11 @@ fun NavItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit)
             .clickable { onClick() }
             .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
-        Text(
-            icon,
-            fontSize = 22.sp,
-            color = fg
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(22.dp),
+            tint = fg
         )
         Text(
             label,
@@ -231,7 +327,6 @@ fun SetupScreen(
     ) {
         Spacer(Modifier.height(80.dp))
 
-        // Logo
         Box(
             modifier = Modifier
                 .size(80.dp)
@@ -307,7 +402,7 @@ fun SetupStep(number: String, title: String, desc: String, done: Boolean, onActi
             contentAlignment = Alignment.Center
         ) {
             Text(
-                if (done) "✓" else number,
+                if (done) "\u2713" else number,
                 color = if (done) Color.White else FactLensColors.neutralGray,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold

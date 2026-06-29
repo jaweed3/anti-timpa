@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +31,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import com.factlens.ui.theme.FactLensTheme
 
@@ -171,7 +172,6 @@ fun FloatingTriggerButton(onTap: () -> Unit) {
     )
 
     Box {
-        // Pulse ring
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -180,7 +180,6 @@ fun FloatingTriggerButton(onTap: () -> Unit) {
                 .background(Color(0xFF00497D).copy(alpha = pulseAlpha * 0.3f))
         )
 
-        // Core button
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -189,14 +188,14 @@ fun FloatingTriggerButton(onTap: () -> Unit) {
                 .clickable { onTap() },
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "security",
-                color = Color.White,
-                fontSize = 28.sp
+            Icon(
+                Icons.Filled.Security,
+                contentDescription = "Verify",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
             )
         }
 
-        // New badge
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)

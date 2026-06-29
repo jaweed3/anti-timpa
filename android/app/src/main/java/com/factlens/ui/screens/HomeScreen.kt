@@ -7,7 +7,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +35,6 @@ fun HomeScreen(
             .fillMaxSize()
             .background(FactLensColors.backgroundAlmostWhite)
     ) {
-        // TopAppBar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -39,6 +42,13 @@ fun HomeScreen(
                 .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                Icons.Filled.Home,
+                contentDescription = "Home",
+                modifier = Modifier.size(24.dp),
+                tint = FactLensColors.primary
+            )
+            Spacer(Modifier.width(Spacing.md))
             Text(
                 "FactLens",
                 fontSize = 22.sp,
@@ -72,7 +82,6 @@ fun HomeScreen(
         ) {
             Spacer(Modifier.height(Spacing.sm))
 
-            // Hero / Quick Scan Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,7 +104,12 @@ fun HomeScreen(
                             .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Scan", fontSize = 28.sp, color = Color.White)
+                        Icon(
+                            Icons.Filled.Home,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = Color.White
+                        )
                     }
                     Spacer(Modifier.height(Spacing.md))
                     Text(
@@ -123,7 +137,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Decorative blurs
                 Box(
                     modifier = Modifier
                         .size(180.dp)
@@ -142,7 +155,6 @@ fun HomeScreen(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // Recent Scans
             SectionHeader("Recent Scans", "View All", onViewAllHistory)
             Spacer(Modifier.height(Spacing.md))
 
@@ -166,7 +178,6 @@ fun HomeScreen(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // Saved Results
             SectionHeader("Saved Results")
             Spacer(Modifier.height(Spacing.md))
 
@@ -225,12 +236,21 @@ private fun RecentScanCard(
                     .background(FactLensColors.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    if (isSupported) "✓" else "!",
-                    color = verdictColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                if (isSupported) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = verdictColor
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Warning,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = verdictColor
+                    )
+                }
             }
             Spacer(Modifier.width(Spacing.md))
             Column(modifier = Modifier.weight(1f)) {

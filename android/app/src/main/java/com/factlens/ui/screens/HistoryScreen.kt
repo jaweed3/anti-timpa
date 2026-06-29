@@ -6,6 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +32,6 @@ fun HistoryScreen(
             .fillMaxSize()
             .background(FactLensColors.backgroundAlmostWhite)
     ) {
-        // TopAppBar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -39,7 +41,12 @@ fun HistoryScreen(
         ) {
             Text("FactLens", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
             Spacer(Modifier.weight(1f))
-            Text("account_circle", fontSize = 24.sp, color = FactLensColors.onSurfaceVariant)
+            Icon(
+                Icons.Filled.Bookmark,
+                contentDescription = "Bookmark",
+                modifier = Modifier.size(24.dp),
+                tint = FactLensColors.onSurfaceVariant
+            )
         }
 
         Column(
@@ -48,7 +55,6 @@ fun HistoryScreen(
                 .padding(horizontal = Spacing.lg)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Search
             Spacer(Modifier.height(Spacing.sm))
             Box(
                 modifier = Modifier
@@ -61,7 +67,12 @@ fun HistoryScreen(
                     modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.lg),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("search", fontSize = 20.sp, color = FactLensColors.outline)
+                    Icon(
+                        Icons.Filled.Search,
+                        contentDescription = "Search",
+                        modifier = Modifier.size(20.dp),
+                        tint = FactLensColors.outline
+                    )
                     Spacer(Modifier.width(Spacing.md))
                     TextField(
                         value = searchQuery,
@@ -87,7 +98,6 @@ fun HistoryScreen(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // Today section
             SectionHeaderHistory("Today")
             Spacer(Modifier.height(Spacing.md))
 
@@ -109,7 +119,6 @@ fun HistoryScreen(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // Yesterday section
             SectionHeaderHistory("Yesterday")
             Spacer(Modifier.height(Spacing.md))
 

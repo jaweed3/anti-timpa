@@ -7,11 +7,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,9 +24,11 @@ import com.factlens.ui.components.EvidenceCard
 import com.factlens.ui.components.FactCard
 import com.factlens.ui.theme.FactLensColors
 import com.factlens.ui.theme.Spacing
+import com.factlens.ScanResultData
 
 @Composable
 fun ScanResultScreen(
+    scanResult: ScanResultData,
     onBack: () -> Unit,
     onOpenSource: (String) -> Unit
 ) {
@@ -31,7 +37,6 @@ fun ScanResultScreen(
             .fillMaxSize()
             .background(FactLensColors.backgroundAlmostWhite)
     ) {
-        // TopAppBar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -39,11 +44,13 @@ fun ScanResultScreen(
                 .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "arrow_back",
-                fontSize = 24.sp,
-                color = FactLensColors.primary,
-                modifier = Modifier.clickable { onBack() }
+            Icon(
+                Icons.Filled.ArrowBack,
+                contentDescription = "Back",
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBack() },
+                tint = FactLensColors.primary
             )
             Spacer(Modifier.width(Spacing.md))
             Text(
@@ -53,7 +60,12 @@ fun ScanResultScreen(
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.weight(1f))
-            Text("account_circle", fontSize = 24.sp, color = FactLensColors.onSurfaceVariant)
+            Icon(
+                Icons.Filled.AccountCircle,
+                contentDescription = "Profile",
+                modifier = Modifier.size(24.dp),
+                tint = FactLensColors.onSurfaceVariant
+            )
         }
 
         Column(
@@ -64,66 +76,48 @@ fun ScanResultScreen(
         ) {
             Spacer(Modifier.height(Spacing.sm))
 
-            // Verdict FactCard
             FactCard(
-                verdict = "Supported",
-                confidence = 0.98,
-                explanation = "This claim is highly supported by current scientific consensus and official documentation. Cross-referencing multiple verified datasets confirms the temporal trends and statistical significance mentioned in the query.",
-                sources = listOf(),
+                verdict = scanResult.verdict,
+                confidence = scanResult.confidence,
+                explanation = scanResult.explanation,
+                sources = scanResult.sources,
                 onClick = {}
             )
 
             Spacer(Modifier.height(Spacing.lg))
 
-            // Evidence section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Evidence Sources",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = FactLensColors.onBackground
-                )
-                Text("3 Found", fontSize = 12.sp, color = FactLensColors.primary)
+            if (scanResult.sources.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Evidence Sources",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = FactLensColors.onBackground
+                    )
+                    Text("${scanResult.sources.size} Found", fontSize = 12.sp, color = FactLensColors.primary)
+                }
+
+                Spacer(Modifier.height(Spacing.md))
+
+                scanResult.sources.forEachIndexed { index, source ->
+                    EvidenceCard(
+                        title = source.title,
+                        domain = source.url,
+                        snippet = source.snippet,
+                        matchPercent = "${95 - index}% Match",
+                        onClick = { onOpenSource(source.url) }
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                }
             }
-
-            Spacer(Modifier.height(Spacing.md))
-
-            EvidenceCard(
-                title = "NASA Climate Study",
-                domain = "nasa.gov",
-                snippet = "Detailed analysis of global surface temperature changes over the last decade, showing a consistent upward trend across all recorded stations.",
-                matchPercent = "99% Match",
-                onClick = { onOpenSource("https://nasa.gov") }
-            )
-
-            Spacer(Modifier.height(Spacing.md))
-
-            EvidenceCard(
-                title = "NOAA Arctic Report Card",
-                domain = "noaa.gov",
-                snippet = "Annual update on the state of the Arctic, highlighting the rapid decrease in sea ice and its impact on global weather patterns.",
-                matchPercent = "96% Match",
-                onClick = { onOpenSource("https://noaa.gov") }
-            )
-
-            Spacer(Modifier.height(Spacing.md))
-
-            EvidenceCard(
-                title = "Nature Climate Journal",
-                domain = "nature.com",
-                snippet = "Peer-reviewed publication discussing the socio-economic impacts of climate change in emerging coastal economies.",
-                matchPercent = "94% Match",
-                onClick = { onOpenSource("https://nature.com") }
-            )
 
             Spacer(Modifier.height(Spacing.xxxl))
         }
 
-        // Bottom action bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -139,7 +133,11 @@ fun ScanResultScreen(
                     contentColor = FactLensColors.onPrimary
                 )
             ) {
-                Text("bookmark", fontSize = 18.sp)
+                Icon(
+                    Icons.Filled.Bookmark,
+                    contentDescription = "Bookmark",
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(Spacing.sm))
                 Text("Save Result")
             }
@@ -150,12 +148,14 @@ fun ScanResultScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = FactLensColors.primary)
             ) {
-                Text("share", fontSize = 18.sp)
+                Icon(
+                    Icons.Filled.Share,
+                    contentDescription = "Share",
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(Spacing.sm))
                 Text("Share")
             }
         }
     }
 }
-
-
