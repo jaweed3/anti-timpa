@@ -1,6 +1,14 @@
+"""
+Source ranking by relevance and authority.
+"""
+
+import logging
 from typing import List
 
+import config
 from models import Source
+
+logger = logging.getLogger("factlens.ranker")
 
 
 def rank_sources(sources: List[Source], claim: str) -> List[Source]:
@@ -8,18 +16,11 @@ def rank_sources(sources: List[Source], claim: str) -> List[Source]:
     if not sources:
         return sources
 
-    TRUSTED_DOMAINS = [
-        "reuters.com", "apnews.com", "bbc.com", "bbc.co.uk",
-        "nytimes.com", "theguardian.com", "washingtonpost.com",
-        "nature.com", "science.org", "who.int", "cdc.gov",
-        "un.org", "scholar.google.com", "pubmed.ncbi.nlm.nih.gov",
-    ]
-
     def score(source: Source) -> float:
         s = 0.0
 
         # Domain authority
-        for d in TRUSTED_DOMAINS:
+        for d in config.TRUSTED_DOMAINS:
             if d in source.url:
                 s += 3.0
                 break
@@ -40,4 +41,6 @@ def rank_sources(sources: List[Source], claim: str) -> List[Source]:
 
         return s
 
-    return sorted(sources, key=score, reverse=True)
+    ranked = sorted(sources, key=score, reverse=True)
+    logger.info("Ranked %d sources, top: %s", len(ranked), ranked[0].title[:50] if ranked else "none")
+    return ranked

@@ -9,8 +9,12 @@ import time
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 import config
 from llm_client import LLMClient
@@ -19,6 +23,11 @@ from search_engine import SearchEngine
 from verification_pipeline import VerificationPipeline
 
 logger = logging.getLogger("factlens")
+
+# ---------------------------------------------------------------------------
+# Rate limiter
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Pipeline singleton
@@ -58,6 +67,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.ALLOWED_ORIGINS,
@@ -72,30 +84,44 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    """Health check endpoint."""
+    llm_available = pipeline.llm.available if pipeline else False
+    return {
+        "status": "ok",
+        "llm": llm_available,
+        "model": config.NARA_MODEL,
+    }
 
 
 @app.post("/verify", response_model=VerificationResponse)
-async def verify(request: VerificationRequest):
-    if not request.text or len(request.text.strip()) < 5:
-        raise HTTPException(status_code=400, detail="Text too short")
+@limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute")
+async def verify(request: Request, body: VerificationRequest):
+    if not body.text or len(body.text.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Text too short (min 5 characters)")
+
+    # Cap input length to prevent abuse
+    text = body.text[:5000]
 
     p = get_pipeline()
     start = time.time()
-    result = await p.verify(request.text)
+    result = await p.verify(text)
     elapsed = time.time() - start
-    logger.info("Verification completed in %.2fs", elapsed)
+    logger.info("POST /verify completed in %.2fs — verdict: %s", elapsed, result.verdict)
     return result
 
 
 @app.get("/verify", response_model=VerificationResponse)
-async def verify_get(q: str = ""):
+@limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute")
+async def verify_get(request: Request, q: str = ""):
     if not q or len(q.strip()) < 5:
-        raise HTTPException(status_code=400, detail="Query too short")
+        raise HTTPException(status_code=400, detail="Query too short (min 5 characters)")
+
+    # Cap input length to prevent abuse
+    text = q[:5000]
 
     p = get_pipeline()
     start = time.time()
-    result = await p.verify(q)
+    result = await p.verify(text)
     elapsed = time.time() - start
-    logger.info("Verification completed in %.2fs", elapsed)
+    logger.info("GET /verify completed in %.2fs — verdict: %s", elapsed, result.verdict)
     return result

@@ -1,24 +1,22 @@
-import json
+"""
+Search engine for evidence retrieval via DuckDuckGo.
+"""
+
+import logging
 import urllib.parse
 from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
 
+import config
 from models import Source
+
+logger = logging.getLogger("factlens.search")
 
 
 class SearchEngine:
     """Retrieve evidence from trusted sources."""
-
-    TRUSTED_DOMAINS = [
-        "reuters.com", "apnews.com", "bbc.com", "bbc.co.uk",
-        "nytimes.com", "theguardian.com", "washingtonpost.com",
-        "nature.com", "science.org", "who.int", "cdc.gov",
-        "un.org", "worldbank.org", "sciencedirect.com",
-        "scholar.google.com", "pubmed.ncbi.nlm.nih.gov",
-        "kemkes.go.id", "kmov.id", "turnbackhoax.id",
-    ]
 
     def __init__(self):
         self.client = httpx.AsyncClient(
@@ -30,6 +28,7 @@ class SearchEngine:
         )
 
     async def search(self, query: str, max_results: int = 5) -> List[Source]:
+        logger.info("Searching for: %s", query[:80])
         sources = await self._duckduckgo_search(query, max_results)
 
         # Deduplicate by URL
@@ -41,9 +40,12 @@ class SearchEngine:
                 unique.append(s)
 
         # Sort: trusted domains first
-        trusted = [s for s in unique if any(d in s.url for d in self.TRUSTED_DOMAINS)]
+        trusted = [s for s in unique if any(d in s.url for d in config.TRUSTED_DOMAINS)]
         others = [s for s in unique if s not in trusted]
-        return (trusted + others)[:max_results]
+        result = (trusted + others)[:max_results]
+
+        logger.info("Found %d results (%d trusted, %d other)", len(result), len(trusted), len(others))
+        return result
 
     async def _duckduckgo_search(self, query: str, max_results: int) -> List[Source]:
         """Search using DuckDuckGo's HTML interface (no API key needed)."""
@@ -51,6 +53,7 @@ class SearchEngine:
 
         try:
             resp = await self.client.get(url)
+            resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "lxml")
             results = []
 
@@ -70,8 +73,13 @@ class SearchEngine:
                     snippet = snippet_el.get_text(strip=True)
                     results.append(Source(title=title, url=href, snippet=snippet))
 
+            logger.debug("DuckDuckGo returned %d raw results", len(results))
             return results
-        except Exception:
+        except httpx.HTTPStatusError as e:
+            logger.error("DuckDuckGo HTTP error %s for query: %s", e.response.status_code, query[:60])
+            return []
+        except Exception as e:
+            logger.exception("DuckDuckGo search failed: %s", e)
             return []
 
     async def close(self):
