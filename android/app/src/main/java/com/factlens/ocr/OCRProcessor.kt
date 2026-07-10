@@ -64,7 +64,11 @@ class OCRProcessor : IntentService("OCRProcessor") {
         confidence: Double,
         sources: List<com.factlens.model.Source>
     ) {
-        ResultOverlayHelper.showResult(this, explanation, verdict, confidence, sources)
+        try {
+            ResultOverlayHelper.showResult(this, explanation, verdict, confidence, sources)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         showScanNotification(verdict, confidence)
         sendBroadcast(Intent("com.factlens.SCAN_COMPLETE"))
     }

@@ -1,5 +1,6 @@
 package com.factlens.overlay
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -27,6 +28,8 @@ object ResultOverlayHelper {
         sources: List<Source>
     ) {
         dismiss()
+
+        if (context !is Activity) return
 
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
 

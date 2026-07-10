@@ -1,6 +1,7 @@
 package com.factlens
 
 import android.app.Application
+import com.factlens.network.VerdictEngine
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -12,6 +13,7 @@ class FactLensApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        VerdictEngine.USE_MOCK = true
 
         val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

@@ -386,15 +386,18 @@ class OverlayService : Service() {
 
     private fun triggerCapture() {
         if (!ScreenCaptureManager.hasProjection()) {
-            openApp()
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            intent?.putExtra("trigger_capture", true)
+            startActivity(intent)
             return
         }
         showScanningIndicator()
-        val intent = Intent(this, ScreenCaptureService::class.java)
+        val serviceIntent = Intent(this, ScreenCaptureService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
+            startForegroundService(serviceIntent)
         } else {
-            startService(intent)
+            startService(serviceIntent)
         }
     }
 

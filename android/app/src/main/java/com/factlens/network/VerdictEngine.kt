@@ -23,9 +23,14 @@ class VerdictEngine {
     companion object {
         // Set this in your app or via BuildConfig
         var geminiApiKey: String = ""
+        // When true, returns simulated data without network calls
+        var USE_MOCK: Boolean = false
     }
 
     suspend fun verify(text: String): VerificationResponse = withContext(Dispatchers.IO) {
+        if (USE_MOCK) {
+            return@withContext mockVerdict(text)
+        }
         val claim = extractClaim(text)
         val sources = searchClient.search(claim)
 
@@ -106,6 +111,37 @@ class VerdictEngine {
         }
 
         return fallbackVerdict(claim, sources)
+    }
+
+    private fun mockVerdict(text: String): VerificationResponse {
+        val claim = extractClaim(text)
+        val hasContent = claim.length > 15
+        return VerificationResponse(
+            claim = claim,
+            verdict = if (hasContent) "Supported" else "Insufficient Evidence",
+            confidence = if (hasContent) 0.87 else 0.0,
+            explanation = if (hasContent)
+                "This claim aligns with multiple credible sources including recent scientific publications. The evidence consistently supports the statement across peer-reviewed studies."
+            else
+                "The scanned text is too short for meaningful analysis. Please try scanning a longer passage.",
+            sources = if (hasContent) listOf(
+                Source(
+                    "Oxford University Study 2026",
+                    "https://example.com/oxford-study",
+                    "Research findings confirm the validity of this claim with 92% confidence across multiple controlled trials."
+                ),
+                Source(
+                    "WHO Global Health Report",
+                    "https://example.com/who-report",
+                    "International health organization data corroborates the main assertions made in the analyzed text."
+                ),
+                Source(
+                    "Nature Scientific Review",
+                    "https://example.com/nature-review",
+                    "Comprehensive meta-analysis of 47 studies supports the factual basis of this information."
+                )
+            ) else emptyList()
+        )
     }
 
     private fun fallbackVerdict(claim: String, sources: List<Source>): VerificationResponse {

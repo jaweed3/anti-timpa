@@ -58,8 +58,15 @@ class MainActivity : ComponentActivity() {
     var hasScreenRecording by mutableStateOf(ScreenCaptureManager.hasProjection())
         private set
 
+    var triggerCaptureRequested by mutableStateOf(false)
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            triggerCaptureRequested = true
+        }
 
         overlayPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -75,6 +82,12 @@ class MainActivity : ComponentActivity() {
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
                 ScreenCaptureManager.setProjectionResult(result.resultCode, result.data)
                 hasScreenRecording = true
+                val serviceIntent = Intent(this, ScreenCaptureService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
             } else {
                 Toast.makeText(this, "Screen recording permission denied", Toast.LENGTH_SHORT).show()
             }
@@ -103,6 +116,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            triggerCaptureRequested = true
+        }
     }
 }
 
@@ -122,9 +138,9 @@ fun MainApp(activity: MainActivity) {
     var isServiceRunning by remember { mutableStateOf(false) }
     var scanResult by remember { mutableStateOf<ScanResultData?>(null) }
 
-    LaunchedEffect(activity.intent) {
-        if (activity.intent.getBooleanExtra("trigger_capture", false)) {
-            activity.intent.removeExtra("trigger_capture")
+    LaunchedEffect(activity.triggerCaptureRequested) {
+        if (activity.triggerCaptureRequested) {
+            activity.triggerCaptureRequested = false
             val manager = activity.getSystemService(
                 Context.MEDIA_PROJECTION_SERVICE
             ) as? MediaProjectionManager ?: return@LaunchedEffect
