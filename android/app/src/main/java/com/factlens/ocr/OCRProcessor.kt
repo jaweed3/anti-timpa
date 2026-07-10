@@ -14,7 +14,9 @@ import com.factlens.model.ScanHistory
 import com.factlens.network.VerdictEngine
 import com.factlens.overlay.ResultOverlayHelper
 import com.google.gson.Gson
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 
 class OCRProcessor : IntentService("OCRProcessor") {
@@ -50,9 +52,20 @@ class OCRProcessor : IntentService("OCRProcessor") {
     private fun verifyText(text: String) {
         val engine = VerdictEngine()
         try {
-            val response = runBlocking { engine.verify(text) }
+            val response = runBlocking {
+                withTimeout(15_000L) {
+                    engine.verify(text)
+                }
+            }
             showResult(response.explanation, response.verdict, response.confidence, response.sources)
             saveToHistory(text, response)
+        } catch (e: TimeoutCancellationException) {
+            showResult(
+                "The scan timed out. The server did not respond in time. Please try again.",
+                "Failed",
+                0.0,
+                emptyList()
+            )
         } catch (e: Exception) {
             showResult("Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
         }

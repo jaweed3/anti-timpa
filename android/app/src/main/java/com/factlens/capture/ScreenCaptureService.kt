@@ -39,9 +39,6 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification()
-        startForeground(2, notification)
-
         val code = intent?.getIntExtra("code", -1) ?: -1
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent?.getParcelableExtra("data", Intent::class.java)
@@ -55,7 +52,17 @@ class ScreenCaptureService : Service() {
 
         if (effectiveCode != 0 && effectiveData != null) {
             try {
-                startProjection(effectiveCode, effectiveData)
+                val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+                if (manager == null) { stopSelf(); return START_NOT_STICKY }
+                mediaProjection = manager.getMediaProjection(effectiveCode, effectiveData)
+
+                startForeground(2, createNotification())
+
+                if (mediaProjection != null) {
+                    startProjection(mediaProjection!!)
+                } else {
+                    stopSelf()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 stopSelf()
@@ -89,10 +96,7 @@ class ScreenCaptureService : Service() {
             .build()
     }
 
-    private fun startProjection(code: Int, data: Intent) {
-        val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return
-        mediaProjection = manager.getMediaProjection(code, data)
-
+    private fun startProjection(projection: MediaProjection) {
         val metrics = DisplayMetrics()
         val wm = getSystemService(WINDOW_SERVICE) as? WindowManager ?: return
         wm.defaultDisplay.getRealMetrics(metrics)
@@ -106,7 +110,13 @@ class ScreenCaptureService : Service() {
         handlerThread = HandlerThread("ScreenCapture").apply { start() }
         val handler = handlerThread?.looper?.let { Handler(it) } ?: return
 
-        virtualDisplay = mediaProjection?.createVirtualDisplay(
+        projection.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                stopSelf()
+            }
+        }, handler)
+
+        virtualDisplay = projection.createVirtualDisplay(
             "ScreenCapture",
             width, height, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,

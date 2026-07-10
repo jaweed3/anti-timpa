@@ -59,7 +59,6 @@ class MainActivity : ComponentActivity() {
         private set
 
     var triggerCaptureRequested by mutableStateOf(false)
-        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
