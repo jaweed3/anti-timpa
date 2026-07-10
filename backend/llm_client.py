@@ -1,17 +1,18 @@
-import os
-from typing import Optional, List, Dict, Any, Union
+"""
+LLM client for NaraRouter API (OpenAI-compatible).
+"""
 
+from typing import Optional, cast
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
+import config
 
 
 class LLMClient:
     """Unified client for NaraRouter API (OpenAI-compatible)."""
 
-    BASE_URL = "https://router.bynara.id/v1"
-    MODEL = "mimo-v2.5-hermes"
-
     def __init__(self):
-        self.api_key = os.getenv("NARA_ROUTER_API", "")
+        self.api_key = config.NARA_ROUTER_API_KEY
         self._client: Optional[OpenAI] = None
         self._init_client()
 
@@ -19,7 +20,7 @@ class LLMClient:
         if self.api_key:
             self._client = OpenAI(
                 api_key=self.api_key,
-                base_url=self.BASE_URL,
+                base_url=config.NARA_BASE_URL,
             )
 
     @property
@@ -37,7 +38,7 @@ class LLMClient:
             raise RuntimeError("No NARA_ROUTER_API key configured.")
 
         resp = self._client.chat.completions.create(
-            model=self.MODEL,
+            model=config.NARA_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -60,7 +61,7 @@ class LLMClient:
         if not self._client:
             raise RuntimeError("No NARA_ROUTER_API key configured.")
 
-        content: List[Dict[str, Any]] = [
+        user_content = [
             {"type": "text", "text": text},
             {
                 "type": "image_url",
@@ -70,12 +71,17 @@ class LLMClient:
             },
         ]
 
-        resp = self._client.chat.completions.create(
-            model=self.MODEL,
-            messages=[
+        messages = cast(
+            list[ChatCompletionMessageParam],
+            [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": content},
+                {"role": "user", "content": user_content},
             ],
+        )
+
+        resp = self._client.chat.completions.create(
+            model=config.NARA_MODEL,
+            messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
         )
