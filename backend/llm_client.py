@@ -1,55 +1,82 @@
 import os
-import re
-from typing import Optional
+from typing import Optional, List, Dict, Any, Union
 
-import google.generativeai as genai
 from openai import OpenAI
 
 
 class LLMClient:
-    """Unified client for LLM providers (OpenAI / Gemini)."""
+    """Unified client for NaraRouter API (OpenAI-compatible)."""
+
+    BASE_URL = "https://router.bynara.id/v1"
+    MODEL = "mimo-v2.5-hermes"
 
     def __init__(self):
-        self.openai_key = os.getenv("OPENAI_API_KEY", "")
-        self.gemini_key = os.getenv("GEMINI_API_KEY", "")
-        self._openai_client: Optional[OpenAI] = None
-        self._gemini_configured = False
-        self._init_clients()
+        self.api_key = os.getenv("NARA_ROUTER_API", "")
+        self._client: Optional[OpenAI] = None
+        self._init_client()
 
-    def _init_clients(self):
-        if self.openai_key:
-            self._openai_client = OpenAI(api_key=self.openai_key)
-        if self.gemini_key:
-            genai.configure(api_key=self.gemini_key)
-            self._gemini_configured = True
+    def _init_client(self):
+        if self.api_key:
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url=self.BASE_URL,
+            )
 
     @property
     def available(self) -> bool:
-        return bool(self.openai_key) or self._gemini_configured
+        return bool(self.api_key)
 
-    def chat(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
-        if self.openai_key and self._openai_client:
-            return self._chat_openai(system_prompt, user_prompt, temperature)
-        if self._gemini_configured:
-            return self._chat_gemini(system_prompt, user_prompt, temperature)
-        raise RuntimeError("No LLM API key configured. Set OPENAI_API_KEY or GEMINI_API_KEY.")
+    def chat(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.3,
+        max_tokens: int = 1024,
+    ) -> str:
+        if not self._client:
+            raise RuntimeError("No NARA_ROUTER_API key configured.")
 
-    def _chat_openai(self, system: str, user: str, temperature: float) -> str:
-        resp = self._openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+        resp = self._client.chat.completions.create(
+            model=self.MODEL,
             messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             temperature=temperature,
+            max_tokens=max_tokens,
         )
         return resp.choices[0].message.content or ""
 
-    def _chat_gemini(self, system: str, user: str, temperature: float) -> str:
-        model = genai.GenerativeModel(
-            "gemini-1.5-flash",
-            system_instruction=system,
-            generation_config={"temperature": temperature},
+    def chat_with_images(
+        self,
+        system_prompt: str,
+        text: str,
+        image_base64: str,
+        mime_type: str = "image/jpeg",
+        temperature: float = 0.3,
+        max_tokens: int = 1024,
+    ) -> str:
+        """Send a multimodal request with text + image (for vision-capable models)."""
+        if not self._client:
+            raise RuntimeError("No NARA_ROUTER_API key configured.")
+
+        content: List[Dict[str, Any]] = [
+            {"type": "text", "text": text},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{image_base64}",
+                },
+            },
+        ]
+
+        resp = self._client.chat.completions.create(
+            model=self.MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
-        resp = model.generate_content(user)
-        return resp.text or ""
+        return resp.choices[0].message.content or ""

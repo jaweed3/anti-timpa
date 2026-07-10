@@ -18,6 +18,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -31,6 +32,8 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.factlens.capture.ScreenCaptureManager
 import com.factlens.capture.ScreenCaptureService
+
+private const val TAG = "FactLens.Overlay"
 
 class OverlayService : Service() {
 
@@ -46,13 +49,18 @@ class OverlayService : Service() {
 
     private val scanCompleteReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            Log.d(TAG, "SCAN_COMPLETE received, hiding scanning indicator")
             hideScanningIndicator()
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as? WindowManager ?: return
+        Log.d(TAG, "OverlayService onCreate")
+        windowManager = getSystemService(WINDOW_SERVICE) as? WindowManager ?: run {
+            Log.e(TAG, "Failed to get WindowManager")
+            return
+        }
         createNotificationChannel()
         val filter = IntentFilter("com.factlens.SCAN_COMPLETE")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -60,15 +68,19 @@ class OverlayService : Service() {
         } else {
             registerReceiver(scanCompleteReceiver, filter)
         }
+        Log.d(TAG, "SCAN_COMPLETE receiver registered")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "OverlayService onStartCommand, flags=$flags, startId=$startId")
         if (!::windowManager.isInitialized) {
+            Log.e(TAG, "WindowManager not initialized, stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
         val notification = createNotification()
         startForeground(1, notification)
+        Log.d(TAG, "Started as foreground service")
         showOverlay()
         return START_STICKY
     }
@@ -96,6 +108,7 @@ class OverlayService : Service() {
     }
 
     private fun showOverlay() {
+        Log.d(TAG, "Creating overlay FAB...")
         val sizePx = (56 * resources.displayMetrics.density).toInt()
 
         pulseView = View(this).apply {
@@ -157,9 +170,10 @@ class OverlayService : Service() {
         overlayView = container
         try {
             windowManager.addView(container, params)
+            Log.d(TAG, "Overlay FAB added to window at position (${params.x}, ${params.y})")
             setupDraggable(container, params)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to add overlay to window: ${e.message}", e)
             stopSelf()
         }
     }
@@ -227,6 +241,7 @@ class OverlayService : Service() {
     }
 
     private fun activateFab() {
+        Log.d(TAG, "FAB activated (long press detected)")
         val gd = GradientDrawable()
         gd.shape = GradientDrawable.OVAL
         gd.setColor(0x4D00AA44.toInt())
@@ -260,6 +275,7 @@ class OverlayService : Service() {
     }
 
     private fun showMenu(fabX: Int, fabY: Int) {
+        Log.d(TAG, "Showing menu at FAB position ($fabX, $fabY)")
         dismissMenu()
 
         val bgOverlay = View(this)
@@ -385,7 +401,9 @@ class OverlayService : Service() {
     }
 
     private fun triggerCapture() {
+        Log.d(TAG, "Trigger capture requested")
         if (!ScreenCaptureManager.hasProjection()) {
+            Log.d(TAG, "No screen projection available, launching app for permission")
             val intent = packageManager.getLaunchIntentForPackage(packageName)
             intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             intent?.putExtra("trigger_capture", true)
@@ -393,6 +411,7 @@ class OverlayService : Service() {
             return
         }
         showScanningIndicator()
+        Log.d(TAG, "Starting ScreenCaptureService...")
         val serviceIntent = Intent(this, ScreenCaptureService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
@@ -468,6 +487,7 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "OverlayService onDestroy")
         pulseAnimator?.cancel()
         longPressHandler?.removeCallbacksAndMessages(null)
         dismissMenu()

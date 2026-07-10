@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,6 +50,8 @@ import com.factlens.ui.theme.FactLensColors
 import com.factlens.ui.theme.FactLensTheme
 import com.factlens.ui.theme.Spacing
 
+private const val TAG = "FactLens.MainActivity"
+
 class MainActivity : ComponentActivity() {
 
     lateinit var overlayPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
@@ -62,8 +65,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate")
 
         if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            Log.d(TAG, "Trigger capture requested from intent")
             triggerCaptureRequested = true
         }
 
@@ -79,8 +84,10 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                Log.d(TAG, "Screen projection permission GRANTED")
                 ScreenCaptureManager.setProjectionResult(result.resultCode, result.data)
                 hasScreenRecording = true
+                Log.d(TAG, "Starting ScreenCaptureService...")
                 val serviceIntent = Intent(this, ScreenCaptureService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -88,6 +95,7 @@ class MainActivity : ComponentActivity() {
                     startService(serviceIntent)
                 }
             } else {
+                Log.w(TAG, "Screen projection permission DENIED")
                 Toast.makeText(this, "Screen recording permission denied", Toast.LENGTH_SHORT).show()
             }
         }
@@ -97,6 +105,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if (Settings.canDrawOverlays(this)) {
+            Log.d(TAG, "Overlay permission already granted, starting OverlayService")
             val intent = Intent(this, OverlayService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(intent)
@@ -116,6 +125,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            Log.d(TAG, "onNewIntent: trigger_capture requested")
             triggerCaptureRequested = true
         }
     }

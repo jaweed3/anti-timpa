@@ -24,7 +24,7 @@ def get_pipeline() -> VerificationPipeline:
         search = SearchEngine()
         pipeline = VerificationPipeline(llm=llm, search=search)
         if not llm.available:
-            print("WARNING: No LLM API key found. Set OPENAI_API_KEY or GEMINI_API_KEY.")
+            print("WARNING: No LLM API key found. Set NARA_ROUTER_API in .env")
     return pipeline
 
 

@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.util.Log
+
+private const val TAG = "FactLens.CaptureMgr"
 
 class ScreenCaptureManager(private val context: Context) {
 
@@ -20,20 +23,31 @@ class ScreenCaptureManager(private val context: Context) {
         fun setProjectionResult(code: Int, data: Intent?) {
             projectionCode = code
             projectionIntent = data
+            Log.d(TAG, "Projection result stored: code=$code, data=${data != null}")
         }
 
         fun getStoredCode(): Int = projectionCode
         fun getStoredData(): Intent? = projectionIntent
-        fun hasProjection(): Boolean = projectionIntent != null && projectionCode != 0
+        fun hasProjection(): Boolean {
+            val has = projectionIntent != null && projectionCode != 0
+            Log.d(TAG, "hasProjection=$has (code=$projectionCode)")
+            return has
+        }
     }
 
     fun requestCapture(activity: Activity) {
-        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return
+        Log.d(TAG, "Requesting screen capture permission...")
+        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: run {
+            Log.e(TAG, "Failed to get MediaProjectionManager")
+            return
+        }
         val intent = manager.createScreenCaptureIntent()
+        Log.d(TAG, "Launching screen capture intent")
         activity.startActivityForResult(intent, 1001)
     }
 
     fun startCaptureService(activity: Activity) {
+        Log.d(TAG, "Starting ScreenCaptureService...")
         val intent = Intent(activity, ScreenCaptureService::class.java)
         intent.putExtra("code", projectionCode)
         intent.putExtra("data", projectionIntent)

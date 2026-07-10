@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.factlens.model.Source
 import com.factlens.ui.screens.FloatingResultOverlay
 import com.factlens.ui.theme.FactLensTheme
+
+private const val TAG = "FactLens.ResultOverlay"
 
 object ResultOverlayHelper {
 
@@ -27,6 +30,8 @@ object ResultOverlayHelper {
         confidence: Double,
         sources: List<Source>
     ) {
+        Log.d(TAG, "Showing result overlay: verdict=$verdict, confidence=$confidence, sources=${sources.size}")
+        Log.d(TAG, "Explanation: ${explanation.take(150)}${if (explanation.length > 150) "..." else ""}")
         dismiss()
 
         if (context !is Activity) return
@@ -81,18 +86,23 @@ object ResultOverlayHelper {
         currentView = composeView
         try {
             windowManager.addView(composeView, params)
+            Log.d(TAG, "Result overlay added to window successfully")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to add result overlay: ${e.message}", e)
             currentView = null
         }
     }
 
     fun dismiss() {
         currentView?.let { view ->
+            Log.d(TAG, "Dismissing result overlay")
             try {
                 val wm = view.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 wm.removeView(view)
-            } catch (_: Exception) {}
+                Log.d(TAG, "Result overlay dismissed")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to dismiss overlay: ${e.message}")
+            }
             currentView = null
         }
     }

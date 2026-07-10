@@ -5,9 +5,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+
+private const val TAG = "FactLens.Search"
 
 class SearchClient {
 
@@ -20,24 +23,41 @@ class SearchClient {
         .build()
 
     suspend fun search(query: String, maxResults: Int = 5): List<Source> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Searching DuckDuckGo for: \"$query\" (maxResults=$maxResults)")
+        val searchStartTime = System.currentTimeMillis()
         try {
             val url = "https://html.duckduckgo.com/html/?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
+            Log.d(TAG, "Request URL: $url")
             val request = okhttp3.Request.Builder()
                 .url(url)
                 .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) FactLens/1.0")
                 .build()
 
             val response = client.newCall(request).execute()
-            val html = response.body?.string() ?: return@withContext emptyList()
+            val searchElapsed = System.currentTimeMillis() - searchStartTime
+            Log.d(TAG, "DuckDuckGo response: HTTP ${response.code} in ${searchElapsed}ms")
 
-            parseResults(html, maxResults)
+            val html = response.body?.string() ?: run {
+                Log.w(TAG, "Response body is null")
+                return@withContext emptyList()
+            }
+            Log.d(TAG, "Response HTML length: ${html.length} chars")
+
+            val results = parseResults(html, maxResults)
+            Log.d(TAG, "Parsed ${results.size} search results")
+            results.forEachIndexed { i, s ->
+                Log.d(TAG, "  Result ${i + 1}: ${s.title.take(50)} — ${s.url.take(60)}")
+            }
+            results
         } catch (e: Exception) {
-            e.printStackTrace()
+            val searchElapsed = System.currentTimeMillis() - searchStartTime
+            Log.e(TAG, "Search FAILED after ${searchElapsed}ms: ${e.message}", e)
             emptyList()
         }
     }
 
     private fun parseResults(html: String, max: Int): List<Source> {
+        Log.d(TAG, "Parsing HTML results (max=$max)...")
         val results = mutableListOf<Source>()
         try {
             // Simple HTML parsing — extract result__title and result__snippet
@@ -61,8 +81,9 @@ class SearchClient {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "HTML parsing error: ${e.message}", e)
         }
+        Log.d(TAG, "Parse complete: ${results.size} results extracted")
         return results
     }
 }
