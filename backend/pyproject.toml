@@ -16,6 +16,7 @@ dependencies = [
 
 [tool.setuptools]
 py-modules = [
+    "config",
     "main",
     "llm_client",
     "models",

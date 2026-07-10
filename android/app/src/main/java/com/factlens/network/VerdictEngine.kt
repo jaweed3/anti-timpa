@@ -9,8 +9,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import android.util.Log
-import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "FactLens.Verdict"
@@ -24,8 +24,14 @@ class VerdictEngine {
         .build()
 
     companion object {
-        // Set this in your app or via BuildConfig
+        // Backend URL — switch between emulator and physical device
+        // Emulator: "http://10.0.2.2:8000"
+        // Physical device: "http://<YOUR_LAPTOP_IP>:8000"
+        var backendUrl: String = "http://10.0.2.2:8000"
+
+        // Gemini API key (fallback if backend is unreachable)
         var geminiApiKey: String = ""
+
         // When true, returns simulated data without network calls
         var USE_MOCK: Boolean = false
     }
@@ -34,12 +40,13 @@ class VerdictEngine {
         Log.d(TAG, "═══════════════════════════════════════")
         Log.d(TAG, "VERDICT ENGINE STARTED")
         Log.d(TAG, "Input text (${text.length} chars): \"${text.take(80)}${if (text.length > 80) "..." else ""}\"")
-        Log.d(TAG, "USE_MOCK=$USE_MOCK, geminiApiKey configured=${geminiApiKey.isNotBlank()}")
+        Log.d(TAG, "Backend: $backendUrl, USE_MOCK=$USE_MOCK, geminiKey=${geminiApiKey.isNotBlank()}")
 
         if (USE_MOCK) {
             Log.d(TAG, "Using MOCK mode, returning simulated data")
             return@withContext mockVerdict(text)
         }
+
         val claim = extractClaim(text)
         Log.d(TAG, "Extracted claim (${claim.length} chars): \"${claim.take(80)}${if (claim.length > 80) "..." else ""}\"")
 
@@ -52,13 +59,38 @@ class VerdictEngine {
             Log.d(TAG, "  Source ${i + 1}: ${s.title.take(60)} — ${s.url.take(80)}")
         }
 
-        if (geminiApiKey.isNotBlank()) {
-            Log.d(TAG, "Gemini API key available, calling Gemini for verdict...")
-            geminiVerdict(claim, sources)
-        } else {
-            Log.w(TAG, "No Gemini API key, using fallback verdict")
-            fallbackVerdict(claim, sources)
+        // Try backend first, fallback to Gemini, then fallback to keyword
+        try {
+            Log.d(TAG, "Trying backend at $backendUrl...")
+            val backendResult = backendVerdict(claim, sources)
+            Log.d(TAG, "Backend verdict: ${backendResult.verdict}")
+            Log.d(TAG, "═══════════════════════════════════════")
+            Log.d(TAG, "VERDICT ENGINE COMPLETE (backend)")
+            Log.d(TAG, "═══════════════════════════════════════")
+            return@withContext backendResult
+        } catch (e: Exception) {
+            Log.w(TAG, "Backend unreachable: ${e.message}")
         }
+
+        if (geminiApiKey.isNotBlank()) {
+            Log.d(TAG, "Falling back to Gemini API...")
+            try {
+                val geminiResult = geminiVerdict(claim, sources)
+                Log.d(TAG, "═══════════════════════════════════════")
+                Log.d(TAG, "VERDICT ENGINE COMPLETE (Gemini)")
+                Log.d(TAG, "═══════════════════════════════════════")
+                return@withContext geminiResult
+            } catch (e: Exception) {
+                Log.e(TAG, "Gemini failed: ${e.message}")
+            }
+        }
+
+        Log.w(TAG, "All backends failed, using fallback verdict")
+        val fallback = fallbackVerdict(claim, sources)
+        Log.d(TAG, "═══════════════════════════════════════")
+        Log.d(TAG, "VERDICT ENGINE COMPLETE (fallback)")
+        Log.d(TAG, "═══════════════════════════════════════")
+        fallback
     }
 
     private fun extractClaim(text: String): String {
@@ -71,6 +103,41 @@ class VerdictEngine {
         val claim = cleaned.take(500).ifBlank { text.take(500) }
         Log.d(TAG, "Claim extracted: ${claim.length} chars")
         return claim
+    }
+
+    private fun backendVerdict(claim: String, sources: List<Source>): VerificationResponse {
+        Log.d(TAG, "Calling backend POST $backendUrl/verify")
+
+        val jsonBody = JSONObject().apply {
+            put("text", claim)
+            put("language", "id")
+        }
+
+        val request = Request.Builder()
+            .url("$backendUrl/verify")
+            .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        val requestStartTime = System.currentTimeMillis()
+        val response = httpClient.newCall(request).execute()
+        val requestElapsed = System.currentTimeMillis() - requestStartTime
+        Log.d(TAG, "Backend response: HTTP ${response.code} in ${requestElapsed}ms")
+
+        if (response.code != 200) {
+            throw Exception("Backend returned HTTP ${response.code}")
+        }
+
+        val body = response.body?.string() ?: throw Exception("Empty response body")
+        Log.d(TAG, "Backend body (${body.length} chars): ${body.take(200)}")
+
+        val json = JSONObject(body)
+        return VerificationResponse(
+            claim = json.optString("claim", claim),
+            verdict = json.optString("verdict", "Unknown"),
+            confidence = json.optDouble("confidence", 0.5).coerceIn(0.0, 0.95),
+            explanation = json.optString("explanation", "No explanation."),
+            sources = sources
+        )
     }
 
     private fun geminiVerdict(claim: String, sources: List<Source>): VerificationResponse {
@@ -91,70 +158,56 @@ class VerdictEngine {
             appendLine("""Return JSON: {"verdict": "Supported|Contradicted|Misleading|Insufficient Evidence", "confidence": 0.0-0.95, "explanation": "..."}""")
         }
 
-        try {
-            Log.d(TAG, "Sending request to Gemini API...")
-            val requestStartTime = System.currentTimeMillis()
-            val jsonBody = JSONObject().apply {
-                put("contents", JSONArray().put(
-                    JSONObject().apply {
-                        put("parts", JSONArray().put(
-                            JSONObject().put("text", prompt)
-                        ))
-                    }
-                ))
-            }
-
-            val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey")
-                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            val requestElapsed = System.currentTimeMillis() - requestStartTime
-            Log.d(TAG, "Gemini API response received in ${requestElapsed}ms, HTTP ${response.code}")
-
-            val body = response.body?.string()
-            if (body != null) {
-                Log.d(TAG, "Response body length: ${body.length} chars")
-                val result = JSONObject(body)
-                val text = result.getJSONArray("candidates")
-                    .getJSONObject(0)
-                    .getJSONObject("content")
-                    .getJSONArray("parts")
-                    .getJSONObject(0)
-                    .getString("text")
-
-                Log.d(TAG, "Gemini raw response (${text.length} chars):")
-                Log.d(TAG, text.take(300))
-
-                // Extract JSON from response
-                val jsonStr = text.trim().removeSurrounding("```json", "```").removeSurrounding("```", "```").trim()
-                val json = JSONObject(jsonStr)
-
-                val verdict = json.optString("verdict", "Unknown")
-                val confidence = json.optDouble("confidence", 0.5).coerceIn(0.0, 0.95)
-                val explanation = json.optString("explanation", "No explanation.")
-
-                Log.d(TAG, "Parsed verdict: $verdict, confidence: $confidence")
-                Log.d(TAG, "═══════════════════════════════════════")
-                Log.d(TAG, "VERDICT ENGINE COMPLETE (Gemini)")
-                Log.d(TAG, "═══════════════════════════════════════")
-
-                return VerificationResponse(
-                    claim = claim,
-                    verdict = verdict,
-                    confidence = confidence,
-                    explanation = explanation,
-                    sources = sources
-                )
-            } else {
-                Log.e(TAG, "Gemini response body is null")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Gemini API call failed: ${e.message}", e)
+        val jsonBody = JSONObject().apply {
+            put("contents", JSONArray().put(
+                JSONObject().apply {
+                    put("parts", JSONArray().put(
+                        JSONObject().put("text", prompt)
+                    ))
+                }
+            ))
         }
 
-        return fallbackVerdict(claim, sources)
+        Log.d(TAG, "Sending request to Gemini API...")
+        val requestStartTime = System.currentTimeMillis()
+        val request = Request.Builder()
+            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiApiKey")
+            .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        val requestElapsed = System.currentTimeMillis() - requestStartTime
+        Log.d(TAG, "Gemini response: HTTP ${response.code} in ${requestElapsed}ms")
+
+        val body = response.body?.string() ?: throw Exception("Empty Gemini response")
+        Log.d(TAG, "Gemini body (${body.length} chars): ${body.take(200)}")
+
+        val result = JSONObject(body)
+        val text = result.getJSONArray("candidates")
+            .getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
+            .getJSONObject(0)
+            .getString("text")
+
+        Log.d(TAG, "Gemini raw response (${text.length} chars): ${text.take(200)}")
+
+        val jsonStr = text.trim().removeSurrounding("```json", "```").removeSurrounding("```", "```").trim()
+        val json = JSONObject(jsonStr)
+
+        val verdict = json.optString("verdict", "Unknown")
+        val confidence = json.optDouble("confidence", 0.5).coerceIn(0.0, 0.95)
+        val explanation = json.optString("explanation", "No explanation.")
+
+        Log.d(TAG, "Parsed verdict: $verdict, confidence: $confidence")
+
+        return VerificationResponse(
+            claim = claim,
+            verdict = verdict,
+            confidence = confidence,
+            explanation = explanation,
+            sources = sources
+        )
     }
 
     private fun mockVerdict(text: String): VerificationResponse {
@@ -165,25 +218,13 @@ class VerdictEngine {
             verdict = if (hasContent) "Supported" else "Insufficient Evidence",
             confidence = if (hasContent) 0.87 else 0.0,
             explanation = if (hasContent)
-                "This claim aligns with multiple credible sources including recent scientific publications. The evidence consistently supports the statement across peer-reviewed studies."
+                "This claim aligns with multiple credible sources including recent scientific publications."
             else
-                "The scanned text is too short for meaningful analysis. Please try scanning a longer passage.",
+                "The scanned text is too short for meaningful analysis.",
             sources = if (hasContent) listOf(
-                Source(
-                    "Oxford University Study 2026",
-                    "https://example.com/oxford-study",
-                    "Research findings confirm the validity of this claim with 92% confidence across multiple controlled trials."
-                ),
-                Source(
-                    "WHO Global Health Report",
-                    "https://example.com/who-report",
-                    "International health organization data corroborates the main assertions made in the analyzed text."
-                ),
-                Source(
-                    "Nature Scientific Review",
-                    "https://example.com/nature-review",
-                    "Comprehensive meta-analysis of 47 studies supports the factual basis of this information."
-                )
+                Source("Oxford University Study 2026", "https://example.com/oxford-study", "Research findings confirm the validity of this claim."),
+                Source("WHO Global Health Report", "https://example.com/who-report", "International health organization data corroborates the main assertions."),
+                Source("Nature Scientific Review", "https://example.com/nature-review", "Comprehensive meta-analysis supports the factual basis.")
             ) else emptyList()
         )
     }
@@ -196,12 +237,11 @@ class VerdictEngine {
                 claim = claim,
                 verdict = "Insufficient Evidence",
                 confidence = 0.0,
-                explanation = "No evidence found. Set GEMINI_API_KEY for AI-powered analysis.",
+                explanation = "No evidence found. Backend or Gemini API required.",
                 sources = emptyList()
             )
         }
 
-        // Simple keyword heuristic
         val claimLower = claim.lowercase()
         val rumorWords = listOf("hoax", "fake", "false", "bohong", "tipu")
         val confirmWords = listOf("true", "real", "fact", "benar", "fakta")
@@ -218,16 +258,11 @@ class VerdictEngine {
         val explanation = buildString {
             append("Found ${sources.size} potential source(s). ")
             if (verdict == "Insufficient Evidence") {
-                append("Set GEMINI_API_KEY for detailed AI analysis.")
+                append("Backend or Gemini API required for detailed analysis.")
             } else {
                 append("Keyword-based analysis suggests this claim may be $verdict.")
             }
         }
-
-        Log.d(TAG, "Fallback verdict: $verdict")
-        Log.d(TAG, "═══════════════════════════════════════")
-        Log.d(TAG, "VERDICT ENGINE COMPLETE (fallback)")
-        Log.d(TAG, "═══════════════════════════════════════")
 
         return VerificationResponse(
             claim = claim,
