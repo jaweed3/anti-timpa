@@ -28,7 +28,7 @@ object ResultOverlayHelper {
     ) {
         dismiss()
 
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
 
         val composeView = ComposeView(context).apply {
             setContent {
@@ -76,7 +76,12 @@ object ResultOverlayHelper {
         }
 
         currentView = composeView
-        windowManager.addView(composeView, params)
+        try {
+            windowManager.addView(composeView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            currentView = null
+        }
     }
 
     fun dismiss() {

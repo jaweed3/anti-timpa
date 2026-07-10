@@ -1,8 +1,12 @@
 package com.factlens.ocr
 
 import android.app.IntentService
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -37,7 +41,7 @@ class OCRProcessor : IntentService("OCRProcessor") {
                 file.delete()
             }
             .addOnFailureListener { e ->
-                showResult("OCR error: ${e.localizedMessage}", "Error", 0.0, emptyList())
+                showResult("OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
                 bitmap.recycle()
                 file.delete()
             }
@@ -50,7 +54,7 @@ class OCRProcessor : IntentService("OCRProcessor") {
             showResult(response.explanation, response.verdict, response.confidence, response.sources)
             saveToHistory(text, response)
         } catch (e: Exception) {
-            showResult("Error: ${e.localizedMessage}", "Error", 0.0, emptyList())
+            showResult("Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
         }
     }
 
@@ -61,6 +65,40 @@ class OCRProcessor : IntentService("OCRProcessor") {
         sources: List<com.factlens.model.Source>
     ) {
         ResultOverlayHelper.showResult(this, explanation, verdict, confidence, sources)
+        showScanNotification(verdict, confidence)
+        sendBroadcast(Intent("com.factlens.SCAN_COMPLETE"))
+    }
+
+    private fun showScanNotification(verdict: String, confidence: Double) {
+        val channelId = "factlens_scan_result"
+        val manager = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager ?: return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Scan Results",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            manager.createNotificationChannel(channel)
+        }
+
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this, 0, intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_menu_search)
+            .setContentTitle("FactLens Scan Complete")
+            .setContentText("$verdict — ${(confidence * 100).toInt()}% confidence")
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        manager.notify(System.currentTimeMillis().toInt(), notification)
     }
 
     private fun saveToHistory(text: String, response: com.factlens.model.VerificationResponse) {

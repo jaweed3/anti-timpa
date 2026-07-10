@@ -32,7 +32,8 @@ fun ScanningScreen(
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = EaseInOutCubic),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "pulseAnim"
     )
 
     LaunchedEffect(Unit) {

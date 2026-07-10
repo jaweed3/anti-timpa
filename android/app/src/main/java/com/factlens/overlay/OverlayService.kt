@@ -1,51 +1,72 @@
 package com.factlens.overlay
 
+import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import com.factlens.ui.theme.FactLensTheme
+import com.factlens.capture.ScreenCaptureManager
+import com.factlens.capture.ScreenCaptureService
 
 class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
+    private var pulseAnimator: ValueAnimator? = null
+    private var menuView: View? = null
+    private var longPressHandler: Handler? = null
+    private var isActivated = false
+    private var pulseView: View? = null
+    private var iconView: TextView? = null
+    private var scanningIndicator: View? = null
+
+    private val scanCompleteReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            hideScanningIndicator()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        windowManager = getSystemService(WINDOW_SERVICE) as? WindowManager ?: return
         createNotificationChannel()
+        val filter = IntentFilter("com.factlens.SCAN_COMPLETE")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(scanCompleteReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(scanCompleteReceiver, filter)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!::windowManager.isInitialized) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val notification = createNotification()
         startForeground(1, notification)
         showOverlay()
@@ -60,14 +81,14 @@ class OverlayService : Service() {
             "FactLens Overlay",
             NotificationManager.IMPORTANCE_LOW
         )
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager ?: return
         manager.createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("FactLens")
-            .setContentText("Tap to verify information")
+            .setContentText("Hold the F button to verify information")
             .setSmallIcon(android.R.drawable.ic_menu_search)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -75,20 +96,47 @@ class OverlayService : Service() {
     }
 
     private fun showOverlay() {
-        val composeView = ComposeView(this).apply {
-            setContent {
-                FactLensTheme {
-                    FloatingTriggerButton(
-                        onTap = {
-                            val intent = packageManager.getLaunchIntentForPackage(packageName)
-                            intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            intent?.putExtra("trigger_capture", true)
-                            startActivity(intent)
-                        }
-                    )
-                }
+        val sizePx = (56 * resources.displayMetrics.density).toInt()
+
+        pulseView = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0x4D00497D.toInt())
+            }
+            layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
+        }
+
+        iconView = TextView(this).apply {
+            text = "F"
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 24f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xFF00497D.toInt())
+            }
+            layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
+        }
+
+        val container = FrameLayout(this).apply {
+            addView(pulseView)
+            addView(iconView)
+        }
+
+        val animator = ValueAnimator.ofFloat(0.7f, 1.4f).apply {
+            duration = 2500
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener { anim ->
+                val scale = anim.animatedValue as Float
+                pulseView?.scaleX = scale
+                pulseView?.scaleY = scale
+                pulseView?.alpha = 1f - ((scale - 0.7f) / 0.7f) * 0.8f
             }
         }
+        pulseAnimator = animator
+        animator.start()
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -106,9 +154,14 @@ class OverlayService : Service() {
             y = 200
         }
 
-        overlayView = composeView
-        windowManager.addView(composeView, params)
-        setupDraggable(composeView, params)
+        overlayView = container
+        try {
+            windowManager.addView(container, params)
+            setupDraggable(container, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            stopSelf()
+        }
     }
 
     private fun setupDraggable(view: View, params: WindowManager.LayoutParams) {
@@ -116,6 +169,8 @@ class OverlayService : Service() {
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
+        var isDragging = false
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
 
         view.setOnTouchListener { _, event ->
             when (event.action) {
@@ -124,93 +179,308 @@ class OverlayService : Service() {
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false
+                    isActivated = false
+                    longPressHandler?.removeCallbacksAndMessages(null)
+                    longPressHandler = Handler(Looper.getMainLooper())
+                    longPressHandler?.postDelayed({
+                        isActivated = true
+                        activateFab()
+                    }, 2000L)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(view, params)
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+                    if (!isDragging && (Math.abs(dx) > touchSlop || Math.abs(dy) > touchSlop)) {
+                        isDragging = true
+                        longPressHandler?.removeCallbacksAndMessages(null)
+                        if (isActivated) {
+                            isActivated = false
+                            deactivateFab()
+                        }
+                    }
+                    if (isDragging) {
+                        params.x = initialX + dx.toInt()
+                        params.y = initialY + dy.toInt()
+                        try {
+                            windowManager.updateViewLayout(view, params)
+                        } catch (_: Exception) {}
+                    }
                     true
                 }
-                else -> false
+                MotionEvent.ACTION_UP -> {
+                    longPressHandler?.removeCallbacksAndMessages(null)
+                    if (isActivated) {
+                        isActivated = false
+                        deactivateFab()
+                        showMenu(params.x, params.y)
+                    }
+                    true
+                }
+                else -> {
+                    longPressHandler?.removeCallbacksAndMessages(null)
+                    true
+                }
             }
         }
     }
 
+    private fun activateFab() {
+        val gd = GradientDrawable()
+        gd.shape = GradientDrawable.OVAL
+        gd.setColor(0x4D00AA44.toInt())
+        pulseView?.setBackground(gd)
+        iconView?.setTextColor(0xFF00AA44.toInt())
+        vibrate()
+    }
+
+    private fun deactivateFab() {
+        val gd = GradientDrawable()
+        gd.shape = GradientDrawable.OVAL
+        gd.setColor(0x4D00497D.toInt())
+        pulseView?.setBackground(gd)
+        iconView?.setTextColor(0xFFFFFFFF.toInt())
+    }
+
+    private fun vibrate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibrator = getSystemService(VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vibrator?.defaultVibrator?.vibrate(
+                    VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                (getSystemService(VIBRATOR_SERVICE) as? Vibrator)?.vibrate(
+                    VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun showMenu(fabX: Int, fabY: Int) {
+        dismissMenu()
+
+        val bgOverlay = View(this)
+        bgOverlay.setBackgroundColor(0x4D000000.toInt())
+        bgOverlay.setOnClickListener { dismissMenu() }
+
+        val card = buildMenuCard()
+
+        val container = FrameLayout(this)
+        container.addView(bgOverlay, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+        container.addView(card, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        ))
+
+        val menuParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        )
+
+        menuView = container
+        try {
+            windowManager.addView(container, menuParams)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            menuView = null
+        }
+    }
+
+    private fun buildMenuCard(): LinearLayout {
+        val density = resources.displayMetrics.density
+        val px = { v: Int -> (v * density).toInt() }
+
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        card.setBackgroundResource(android.R.color.transparent)
+
+        val cardBg = GradientDrawable()
+        cardBg.shape = GradientDrawable.RECTANGLE
+        cardBg.setColor(0xFFFFFFFF.toInt())
+        cardBg.setCornerRadius(px(16).toFloat())
+        card.background = cardBg
+        card.elevation = px(8).toFloat()
+
+        card.addView(buildMenuItem("\uD83D\uDCF7", "Scan Full Screen") {
+            dismissMenu(); triggerCapture()
+        })
+        card.addView(buildDivider())
+        card.addView(buildMenuItem("\u2702\uFE0F", "Select Area") {
+            dismissMenu(); triggerCapture()
+        })
+        card.addView(buildDivider())
+        card.addView(buildMenuItem("\u2699\uFE0F", "Open FactLens") {
+            dismissMenu(); openApp()
+        })
+
+        return card
+    }
+
+    private fun buildMenuItem(emoji: String, label: String, onClick: () -> Unit): View {
+        val density = resources.displayMetrics.density
+        val px = { v: Int -> (v * density).toInt() }
+
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.setPadding(px(16), px(16), px(16), px(16))
+        row.setOnClickListener { onClick() }
+
+        val iconView = TextView(this)
+        iconView.text = emoji
+        iconView.textSize = 18f
+        row.addView(iconView, px(24), px(24))
+
+        val labelView = TextView(this)
+        labelView.text = label
+        labelView.textSize = 14f
+        labelView.setTextColor(0xFF191C20.toInt())
+        labelView.typeface = android.graphics.Typeface.DEFAULT_BOLD
+        val labelLp = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        labelLp.leftMargin = px(12)
+        row.addView(labelView, labelLp)
+
+        return row
+    }
+
+    private fun buildDivider(): View {
+        val density = resources.displayMetrics.density
+        val px = { v: Int -> (v * density).toInt() }
+
+        val divider = View(this)
+        divider.setBackgroundColor(0xFFC1C7D2.toInt())
+        val lp = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            1
+        )
+        lp.leftMargin = px(16)
+        lp.rightMargin = px(16)
+        divider.layoutParams = lp
+        return divider
+    }
+
+    private fun dismissMenu() {
+        menuView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (_: Exception) {}
+            menuView = null
+        }
+    }
+
+    private fun triggerCapture() {
+        if (!ScreenCaptureManager.hasProjection()) {
+            openApp()
+            return
+        }
+        showScanningIndicator()
+        val intent = Intent(this, ScreenCaptureService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun openApp() {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+    }
+
+    private fun showScanningIndicator() {
+        hideScanningIndicator()
+        val density = resources.displayMetrics.density
+        val px = { v: Int -> (v * density).toInt() }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(0xE6000000.toInt())
+                setCornerRadius(px(12).toFloat())
+            }
+            background = bg
+            setPadding(px(16), px(12), px(16), px(12))
+        }
+
+        val spinner = ProgressBar(this, null, android.R.attr.progressBarStyleSmall)
+        val label = TextView(this).apply {
+            text = "FactLens Scanning..."
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 14f
+            setPadding(px(8), 0, 0, 0)
+        }
+
+        container.addView(spinner)
+        container.addView(label)
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+            y = px(80)
+        }
+
+        scanningIndicator = container
+        try {
+            windowManager.addView(container, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun hideScanningIndicator() {
+        scanningIndicator?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (_: Exception) {}
+            scanningIndicator = null
+        }
+    }
+
     override fun onDestroy() {
+        pulseAnimator?.cancel()
+        longPressHandler?.removeCallbacksAndMessages(null)
+        dismissMenu()
+        hideScanningIndicator()
+        try {
+            unregisterReceiver(scanCompleteReceiver)
+        } catch (_: Exception) {}
         if (::overlayView.isInitialized) {
-            windowManager.removeView(overlayView)
+            try {
+                windowManager.removeView(overlayView)
+            } catch (_: Exception) {}
         }
         super.onDestroy()
     }
 
     companion object {
         const val CHANNEL_ID = "factlens_overlay"
-    }
-}
-
-@Composable
-fun FloatingTriggerButton(onTap: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.7f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "pulseScale"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "pulseAlpha"
-    )
-
-    Box {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .scale(pulseScale)
-                .clip(CircleShape)
-                .background(Color(0xFF00497D).copy(alpha = pulseAlpha * 0.3f))
-        )
-
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF00497D))
-                .clickable { onTap() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Filled.Security,
-                contentDescription = "Verify",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 2.dp, y = (-2).dp)
-                .size(16.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFBA1A1A))
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .align(Alignment.Center)
-            )
-        }
     }
 }

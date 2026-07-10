@@ -1,7 +1,8 @@
 plugins {
     id("com.android.application")
     kotlin("android")
-    kotlin("kapt")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -37,9 +38,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
-    }
 }
 
 dependencies {
@@ -58,7 +56,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
 
     // ML Kit OCR
-    implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
     // CameraX for preview
     implementation("androidx.camera:camera-core:1.3.1")

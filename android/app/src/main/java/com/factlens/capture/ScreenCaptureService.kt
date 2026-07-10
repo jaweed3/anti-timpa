@@ -21,6 +21,7 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.factlens.overlay.OverlayService
+import com.factlens.capture.ScreenCaptureManager
 import java.io.File
 import java.io.FileOutputStream
 
@@ -42,10 +43,25 @@ class ScreenCaptureService : Service() {
         startForeground(2, notification)
 
         val code = intent?.getIntExtra("code", -1) ?: -1
-        val data = intent?.getParcelableExtra("data", Intent::class.java)
+        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("data", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<Intent>("data")
+        }
 
-        if (code != -1 && data != null) {
-            startProjection(code, data)
+        val effectiveCode = if (code != -1) code else ScreenCaptureManager.getStoredCode()
+        val effectiveData = if (data != null) data else ScreenCaptureManager.getStoredData()
+
+        if (effectiveCode != 0 && effectiveData != null) {
+            try {
+                startProjection(effectiveCode, effectiveData)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                stopSelf()
+            }
+        } else {
+            stopSelf()
         }
 
         return START_NOT_STICKY
@@ -59,7 +75,7 @@ class ScreenCaptureService : Service() {
             "Screen Capture",
             NotificationManager.IMPORTANCE_LOW
         )
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager ?: return
         manager.createNotificationChannel(channel)
     }
 
@@ -74,11 +90,11 @@ class ScreenCaptureService : Service() {
     }
 
     private fun startProjection(code: Int, data: Intent) {
-        val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return
         mediaProjection = manager.getMediaProjection(code, data)
 
         val metrics = DisplayMetrics()
-        val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        val wm = getSystemService(WINDOW_SERVICE) as? WindowManager ?: return
         wm.defaultDisplay.getRealMetrics(metrics)
 
         val density = metrics.densityDpi
@@ -88,7 +104,7 @@ class ScreenCaptureService : Service() {
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
         handlerThread = HandlerThread("ScreenCapture").apply { start() }
-        val handler = Handler(handlerThread!!.looper)
+        val handler = handlerThread?.looper?.let { Handler(it) } ?: return
 
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenCapture",
@@ -99,33 +115,36 @@ class ScreenCaptureService : Service() {
             handler
         )
 
-        // Capture immediately
         captureScreenshot(handler)
     }
 
     private fun captureScreenshot(handler: Handler) {
         handler.post {
-            val image = imageReader?.acquireLatestImage()
-            if (image != null) {
-                val planes = image.planes
-                val buffer = planes[0].buffer
-                val pixelStride = planes[0].pixelStride
-                val rowStride = planes[0].rowStride
-                val rowPadding = rowStride - pixelStride * image.width
+            try {
+                val image = imageReader?.acquireLatestImage()
+                if (image != null) {
+                    val planes = image.planes
+                    val buffer = planes[0].buffer
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * image.width
 
-                val bitmap = Bitmap.createBitmap(
-                    image.width + rowPadding / pixelStride,
-                    image.height,
-                    Bitmap.Config.ARGB_8888
-                )
-                bitmap.copyPixelsFromBuffer(buffer)
+                    val bitmap = Bitmap.createBitmap(
+                        image.width + rowPadding / pixelStride,
+                        image.height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    bitmap.copyPixelsFromBuffer(buffer)
 
-                val cropped = Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
-                saveAndProcess(cropped)
+                    val cropped = Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
+                    saveAndProcess(cropped)
 
-                image.close()
-                bitmap.recycle()
-                cropped.recycle()
+                    image.close()
+                    bitmap.recycle()
+                    cropped.recycle()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -137,7 +156,6 @@ class ScreenCaptureService : Service() {
             bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
         }
 
-        // Start OCR processing
         val intent = Intent(this, com.factlens.ocr.OCRProcessor::class.java)
         intent.putExtra("image_path", file.absolutePath)
         startService(intent)

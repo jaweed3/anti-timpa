@@ -21,10 +21,14 @@ class ScreenCaptureManager(private val context: Context) {
             projectionCode = code
             projectionIntent = data
         }
+
+        fun getStoredCode(): Int = projectionCode
+        fun getStoredData(): Intent? = projectionIntent
+        fun hasProjection(): Boolean = projectionIntent != null && projectionCode != 0
     }
 
     fun requestCapture(activity: Activity) {
-        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return
         val intent = manager.createScreenCaptureIntent()
         activity.startActivityForResult(intent, 1001)
     }

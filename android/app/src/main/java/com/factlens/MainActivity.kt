@@ -2,6 +2,9 @@ package com.factlens
 
 import android.Manifest
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
+import android.content.Context
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -9,7 +12,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -39,6 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.factlens.capture.ScreenCaptureManager
+import com.factlens.capture.ScreenCaptureService
 import com.factlens.overlay.OverlayService
 import com.factlens.ui.screens.*
 import com.factlens.ui.theme.FactLensColors
@@ -47,16 +51,34 @@ import com.factlens.ui.theme.Spacing
 
 class MainActivity : ComponentActivity() {
 
-    val overlayPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { }
+    lateinit var overlayPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+    private lateinit var notificationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    lateinit var mediaProjectionLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { }
+    var hasScreenRecording by mutableStateOf(ScreenCaptureManager.hasProjection())
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        overlayPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { }
+
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { }
+
+        mediaProjectionLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                ScreenCaptureManager.setProjectionResult(result.resultCode, result.data)
+                hasScreenRecording = true
+            } else {
+                Toast.makeText(this, "Screen recording permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -100,14 +122,13 @@ fun MainApp(activity: MainActivity) {
     var isServiceRunning by remember { mutableStateOf(false) }
     var scanResult by remember { mutableStateOf<ScanResultData?>(null) }
 
-    val captureLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { }
-
-    LaunchedEffect(activity) {
+    LaunchedEffect(activity.intent) {
         if (activity.intent.getBooleanExtra("trigger_capture", false)) {
             activity.intent.removeExtra("trigger_capture")
-            com.factlens.capture.ScreenCaptureManager(activity).requestCapture(activity)
+            val manager = activity.getSystemService(
+                Context.MEDIA_PROJECTION_SERVICE
+            ) as? MediaProjectionManager ?: return@LaunchedEffect
+            activity.mediaProjectionLauncher.launch(manager.createScreenCaptureIntent())
         }
     }
 
@@ -116,6 +137,7 @@ fun MainApp(activity: MainActivity) {
             "setup" -> {
                 SetupScreen(
                     hasOverlayPermission = hasOverlayPermission,
+                    hasScreenRecording = activity.hasScreenRecording,
                     isServiceRunning = isServiceRunning,
                     onRequestOverlay = {
                         val intent = Intent(
@@ -123,6 +145,12 @@ fun MainApp(activity: MainActivity) {
                             Uri.parse("package:${activity.packageName}")
                         )
                         activity.overlayPermissionLauncher.launch(intent)
+                    },
+                    onRequestScreenRecording = {
+                        val manager = activity.getSystemService(
+                            Context.MEDIA_PROJECTION_SERVICE
+                        ) as MediaProjectionManager
+                        activity.mediaProjectionLauncher.launch(manager.createScreenCaptureIntent())
                     },
                     onStartService = {
                         if (Settings.canDrawOverlays(activity)) {
@@ -159,6 +187,12 @@ fun MainApp(activity: MainActivity) {
             "scanning" -> {
                 ScanningScreen(
                     onScanComplete = {
+                        scanResult = ScanResultData(
+                            verdict = "Insufficient Evidence",
+                            confidence = 0.0,
+                            explanation = "Scan completed. No text could be analyzed. Please try again with visible text content.",
+                            sources = emptyList()
+                        )
                         currentScreen = "scan_result"
                     }
                 )
@@ -314,8 +348,10 @@ fun BottomNavItem(
 @Composable
 fun SetupScreen(
     hasOverlayPermission: Boolean,
+    hasScreenRecording: Boolean,
     isServiceRunning: Boolean,
     onRequestOverlay: () -> Unit,
+    onRequestScreenRecording: () -> Unit,
     onStartService: () -> Unit
 ) {
     Column(
@@ -368,6 +404,14 @@ fun SetupScreen(
                 Spacer(Modifier.height(Spacing.md))
                 SetupStep(
                     number = "2",
+                    title = "Screen Recording",
+                    desc = "Allow FactLens to capture your screen",
+                    done = hasScreenRecording,
+                    onAction = onRequestScreenRecording
+                )
+                Spacer(Modifier.height(Spacing.md))
+                SetupStep(
+                    number = "3",
                     title = "Start Overlay",
                     desc = "Launch the floating verification button",
                     done = isServiceRunning,
