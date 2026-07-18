@@ -39,6 +39,15 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
+        <activity
+            android:name=".PermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.FactLens.Transparent" />
+
         <service
             android:name=".ocr.OCRProcessor"
             android:exported="false" />
