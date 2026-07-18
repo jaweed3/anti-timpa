@@ -30,6 +30,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import com.factlens.PermissionActivity
 import com.factlens.capture.ScreenCaptureManager
 import com.factlens.capture.ScreenCaptureService
 
@@ -40,17 +41,27 @@ class OverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
     private var pulseAnimator: ValueAnimator? = null
-    private var menuView: View? = null
     private var longPressHandler: Handler? = null
+    private var scanningTimeout: Handler? = null
     private var isActivated = false
     private var pulseView: View? = null
     private var iconView: TextView? = null
     private var scanningIndicator: View? = null
 
-    private val scanCompleteReceiver = object : BroadcastReceiver() {
+    private val overlayReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.d(TAG, "SCAN_COMPLETE received, hiding scanning indicator")
-            hideScanningIndicator()
+            scanningTimeout?.removeCallbacksAndMessages(null)
+            when (intent.action) {
+                "com.factlens.SCAN_COMPLETE" -> {
+                    Log.d(TAG, "SCAN_COMPLETE received, hiding scanning indicator")
+                    hideScanningIndicator()
+                }
+                "com.factlens.PERMISSION_DENIED" -> {
+                    Log.d(TAG, "PERMISSION_DENIED received, hiding scanning indicator")
+                    hideScanningIndicator()
+                    showPermissionRetry()
+                }
+            }
         }
     }
 
@@ -62,13 +73,17 @@ class OverlayService : Service() {
             return
         }
         createNotificationChannel()
-        val filter = IntentFilter("com.factlens.SCAN_COMPLETE")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(scanCompleteReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(scanCompleteReceiver, filter)
+        val filter = IntentFilter().apply {
+            addAction("com.factlens.SCAN_COMPLETE")
+            addAction("com.factlens.PERMISSION_DENIED")
         }
-        Log.d(TAG, "SCAN_COMPLETE receiver registered")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(overlayReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(overlayReceiver, filter)
+        }
+        hideScanningCallback = { hideScanningIndicator() }
+        Log.d(TAG, "Broadcast receivers registered")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -79,8 +94,12 @@ class OverlayService : Service() {
             return START_NOT_STICKY
         }
         val notification = createNotification()
-        startForeground(1, notification)
-        Log.d(TAG, "Started as foreground service")
+        try {
+            startForeground(1, notification)
+            Log.d(TAG, "Started as foreground service")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground: ${e.message}")
+        }
         showOverlay()
         return START_STICKY
     }
@@ -167,7 +186,10 @@ class OverlayService : Service() {
             y = 200
         }
 
-        overlayView = container
+        if (::overlayView.isInitialized) {
+            try { windowManager.removeView(overlayView) } catch (_: Exception) {}
+            overlayView = container
+        }
         try {
             windowManager.addView(container, params)
             Log.d(TAG, "Overlay FAB added to window at position (${params.x}, ${params.y})")
@@ -228,7 +250,7 @@ class OverlayService : Service() {
                     if (isActivated) {
                         isActivated = false
                         deactivateFab()
-                        showMenu(params.x, params.y)
+                        triggerCapture()
                     }
                     true
                 }
@@ -274,155 +296,15 @@ class OverlayService : Service() {
         } catch (_: Exception) {}
     }
 
-    private fun showMenu(fabX: Int, fabY: Int) {
-        Log.d(TAG, "Showing menu at FAB position ($fabX, $fabY)")
-        dismissMenu()
-
-        val bgOverlay = View(this)
-        bgOverlay.setBackgroundColor(0x4D000000.toInt())
-        bgOverlay.setOnClickListener { dismissMenu() }
-
-        val card = buildMenuCard()
-
-        val container = FrameLayout(this)
-        container.addView(bgOverlay, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
-        container.addView(card, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            Gravity.CENTER
-        ))
-
-        val menuParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        )
-
-        menuView = container
-        try {
-            windowManager.addView(container, menuParams)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            menuView = null
-        }
-    }
-
-    private fun buildMenuCard(): LinearLayout {
-        val density = resources.displayMetrics.density
-        val px = { v: Int -> (v * density).toInt() }
-
-        val card = LinearLayout(this)
-        card.orientation = LinearLayout.VERTICAL
-        card.setBackgroundResource(android.R.color.transparent)
-
-        val cardBg = GradientDrawable()
-        cardBg.shape = GradientDrawable.RECTANGLE
-        cardBg.setColor(0xFFFFFFFF.toInt())
-        cardBg.setCornerRadius(px(16).toFloat())
-        card.background = cardBg
-        card.elevation = px(8).toFloat()
-
-        card.addView(buildMenuItem("\uD83D\uDCF7", "Scan Full Screen") {
-            dismissMenu(); triggerCapture()
-        })
-        card.addView(buildDivider())
-        card.addView(buildMenuItem("\u2702\uFE0F", "Select Area") {
-            dismissMenu(); triggerCapture()
-        })
-        card.addView(buildDivider())
-        card.addView(buildMenuItem("\u2699\uFE0F", "Open FactLens") {
-            dismissMenu(); openApp()
-        })
-
-        return card
-    }
-
-    private fun buildMenuItem(emoji: String, label: String, onClick: () -> Unit): View {
-        val density = resources.displayMetrics.density
-        val px = { v: Int -> (v * density).toInt() }
-
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        row.setPadding(px(16), px(16), px(16), px(16))
-        row.setOnClickListener { onClick() }
-
-        val iconView = TextView(this)
-        iconView.text = emoji
-        iconView.textSize = 18f
-        row.addView(iconView, px(24), px(24))
-
-        val labelView = TextView(this)
-        labelView.text = label
-        labelView.textSize = 14f
-        labelView.setTextColor(0xFF191C20.toInt())
-        labelView.typeface = android.graphics.Typeface.DEFAULT_BOLD
-        val labelLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        labelLp.leftMargin = px(12)
-        row.addView(labelView, labelLp)
-
-        return row
-    }
-
-    private fun buildDivider(): View {
-        val density = resources.displayMetrics.density
-        val px = { v: Int -> (v * density).toInt() }
-
-        val divider = View(this)
-        divider.setBackgroundColor(0xFFC1C7D2.toInt())
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            1
-        )
-        lp.leftMargin = px(16)
-        lp.rightMargin = px(16)
-        divider.layoutParams = lp
-        return divider
-    }
-
-    private fun dismissMenu() {
-        menuView?.let {
-            try {
-                windowManager.removeView(it)
-            } catch (_: Exception) {}
-            menuView = null
-        }
-    }
-
     private fun triggerCapture() {
         Log.d(TAG, "Trigger capture requested")
-        if (!ScreenCaptureManager.hasProjection()) {
-            Log.d(TAG, "No screen projection available, launching app for permission")
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-            intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            intent?.putExtra("trigger_capture", true)
-            startActivity(intent)
-            return
-        }
+        ScreenCaptureManager.clearProjection()
         showScanningIndicator()
-        Log.d(TAG, "Starting ScreenCaptureService...")
-        val serviceIntent = Intent(this, ScreenCaptureService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
-    }
-
-    private fun openApp() {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        intent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        Log.d(TAG, "Launching transparent PermissionActivity for fresh projection")
+        val intent = Intent(this, PermissionActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_NO_USER_ACTION or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
     }
 
@@ -475,6 +357,12 @@ class OverlayService : Service() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        scanningTimeout?.removeCallbacksAndMessages(null)
+        scanningTimeout = Handler(Looper.getMainLooper())
+        scanningTimeout?.postDelayed({
+            Log.w(TAG, "Scanning timeout after 30s, hiding indicator")
+            hideScanningIndicator()
+        }, 30000L)
     }
 
     private fun hideScanningIndicator() {
@@ -486,14 +374,58 @@ class OverlayService : Service() {
         }
     }
 
+    private fun showPermissionRetry() {
+        val density = resources.displayMetrics.density
+        val px = { v: Int -> (v * density).toInt() }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(0xE6CC3333.toInt())
+                setCornerRadius(px(12).toFloat())
+            }
+            background = bg
+            setPadding(px(16), px(12), px(16), px(12))
+            setOnClickListener {
+                try { windowManager.removeView(this) } catch (_: Exception) {}
+                scanningTimeout?.removeCallbacksAndMessages(null)
+                triggerCapture()
+            }
+        }
+        val label = TextView(this).apply {
+            text = "Permission required — tap to retry"
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 14f
+        }
+        container.addView(label)
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+            y = px(80)
+        }
+        scanningIndicator = container
+        try { windowManager.addView(container, params) } catch (_: Exception) {}
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "OverlayService onDestroy")
+        hideScanningCallback = null
         pulseAnimator?.cancel()
         longPressHandler?.removeCallbacksAndMessages(null)
-        dismissMenu()
+        scanningTimeout?.removeCallbacksAndMessages(null)
         hideScanningIndicator()
         try {
-            unregisterReceiver(scanCompleteReceiver)
+            unregisterReceiver(overlayReceiver)
         } catch (_: Exception) {}
         if (::overlayView.isInitialized) {
             try {
@@ -505,5 +437,6 @@ class OverlayService : Service() {
 
     companion object {
         const val CHANNEL_ID = "factlens_overlay"
+        var hideScanningCallback: (() -> Unit)? = null
     }
 }
