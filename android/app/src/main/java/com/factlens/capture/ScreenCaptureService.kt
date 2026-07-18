@@ -20,6 +20,7 @@ import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.factlens.overlay.OverlayService
 import com.factlens.capture.ScreenCaptureManager
@@ -44,7 +45,18 @@ class ScreenCaptureService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "ScreenCaptureService onStartCommand")
         val notification = createNotification()
-        startForeground(2, notification)
+        try {
+            startForeground(2, notification)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "FGS mediaProjection permission not granted: ${e.message}")
+            Toast.makeText(this, "Screen capture permission error. Reinstall app.", Toast.LENGTH_LONG).show()
+            stopSelf()
+            return START_NOT_STICKY
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service: ${e.message}")
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         val code = intent?.getIntExtra("code", -1) ?: -1
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -120,6 +132,29 @@ class ScreenCaptureService : Service() {
         handlerThread = HandlerThread("ScreenCapture").apply { start() }
         val handler = handlerThread?.looper?.let { Handler(it) } ?: return
 
+        // MUST register callback before createVirtualDisplay (required on newer Android)
+        mediaProjection?.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                Log.d(TAG, "MediaProjection stopped by system")
+                stopSelf()
+            }
+        }, handler)
+
+        // Set up listener to capture when first frame is available
+        imageReader?.setOnImageAvailableListener({ reader ->
+            Log.d(TAG, "Image available from ImageReader")
+            try {
+                val image = reader.acquireLatestImage() ?: run {
+                    Log.w(TAG, "acquireLatestImage returned null, retrying...")
+                    return@setOnImageAvailableListener
+                }
+                Log.d(TAG, "Image acquired: ${image.width}x${image.height}")
+                processImage(image)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to acquire image from listener: ${e.message}", e)
+            }
+        }, handler)
+
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenCapture",
             width, height, density,
@@ -130,41 +165,43 @@ class ScreenCaptureService : Service() {
         )
         Log.d(TAG, "VirtualDisplay created: ${virtualDisplay != null}")
 
-        captureScreenshot(handler)
+        // Fallback: try polling after a short delay in case listener doesn't fire
+        handler.postDelayed({
+            if (virtualDisplay != null) {
+                Log.d(TAG, "Fallback: polling for image...")
+                try {
+                    val image = imageReader?.acquireLatestImage()
+                    if (image != null) {
+                        processImage(image)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Fallback capture failed: ${e.message}")
+                }
+            }
+        }, 500)
     }
 
-    private fun captureScreenshot(handler: Handler) {
-        Log.d(TAG, "Capturing screenshot...")
-        handler.post {
-            try {
-                val image = imageReader?.acquireLatestImage()
-                if (image != null) {
-                    Log.d(TAG, "Image acquired: ${image.width}x${image.height}")
-                    val planes = image.planes
-                    val buffer = planes[0].buffer
-                    val pixelStride = planes[0].pixelStride
-                    val rowStride = planes[0].rowStride
-                    val rowPadding = rowStride - pixelStride * image.width
+    private fun processImage(image: android.media.Image) {
+        Log.d(TAG, "Processing image: ${image.width}x${image.height}")
+        val planes = image.planes
+        val buffer = planes[0].buffer
+        val pixelStride = planes[0].pixelStride
+        val rowStride = planes[0].rowStride
 
-                    val bitmap = Bitmap.createBitmap(
-                        image.width + rowPadding / pixelStride,
-                        image.height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    bitmap.copyPixelsFromBuffer(buffer)
+        val bitmap = Bitmap.createBitmap(
+            rowStride / pixelStride,
+            image.height,
+            Bitmap.Config.ARGB_8888
+        )
+        bitmap.copyPixelsFromBuffer(buffer)
 
-                    val cropped = Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
-                    Log.d(TAG, "Screenshot bitmap ready: ${cropped.width}x${cropped.height}")
-                    saveAndProcess(cropped)
+        val cropped = Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
+        Log.d(TAG, "Bitmap created: ${cropped.width}x${cropped.height}")
 
-                    image.close()
-                    bitmap.recycle()
-                    cropped.recycle()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        image.close()
+        bitmap.recycle()
+
+        saveAndProcess(cropped)
     }
 
     private fun saveAndProcess(bitmap: Bitmap) {
@@ -191,6 +228,7 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         imageReader?.close()
         handlerThread?.quitSafely()
+        ScreenCaptureManager.clearProjection()
         super.onDestroy()
     }
 

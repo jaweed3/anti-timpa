@@ -33,6 +33,12 @@ class ScreenCaptureManager(private val context: Context) {
             Log.d(TAG, "hasProjection=$has (code=$projectionCode)")
             return has
         }
+
+        fun clearProjection() {
+            projectionIntent = null
+            projectionCode = 0
+            Log.d(TAG, "Projection cleared")
+        }
     }
 
     fun requestCapture(activity: Activity) {
