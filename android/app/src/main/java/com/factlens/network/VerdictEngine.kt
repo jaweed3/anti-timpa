@@ -85,12 +85,12 @@ class VerdictEngine {
             }
         }
 
-        Log.w(TAG, "All backends failed, using fallback verdict")
-        val fallback = fallbackVerdict(claim, sources)
+        Log.w(TAG, "No backends available, using mock verdict")
+        val mock = mockVerdict(claim)
         Log.d(TAG, "═══════════════════════════════════════")
-        Log.d(TAG, "VERDICT ENGINE COMPLETE (fallback)")
+        Log.d(TAG, "VERDICT ENGINE COMPLETE (mock)")
         Log.d(TAG, "═══════════════════════════════════════")
-        fallback
+        mock
     }
 
     private fun extractClaim(text: String): String {

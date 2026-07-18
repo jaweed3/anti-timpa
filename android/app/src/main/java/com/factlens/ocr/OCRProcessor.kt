@@ -13,6 +13,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.factlens.model.ScanHistory
 import com.factlens.network.VerdictEngine
+import com.factlens.overlay.OverlayService
 import com.factlens.overlay.ResultOverlayHelper
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
@@ -127,7 +128,10 @@ class OCRProcessor : IntentService("OCRProcessor") {
             Log.e(TAG, "Failed to show result overlay: ${e.message}", e)
         }
         showScanNotification(verdict, confidence)
-        sendBroadcast(Intent("com.factlens.SCAN_COMPLETE"))
+        OverlayService.hideScanningCallback?.invoke()
+        val scanComplete = Intent("com.factlens.SCAN_COMPLETE")
+        scanComplete.`package` = packageName
+        sendBroadcast(scanComplete)
         Log.d(TAG, "SCAN_COMPLETE broadcast sent")
     }
 
