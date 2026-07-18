@@ -21,6 +21,9 @@ interface HistoryDao {
     @Query("SELECT * FROM ScanHistory WHERE isFavorite = 1 ORDER BY timestamp DESC")
     fun getFavorites(): Flow<List<ScanHistory>>
 
+    @Query("SELECT * FROM ScanHistory ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatest(): ScanHistory?
+
     @Query("SELECT * FROM ScanHistory WHERE id = :id")
     suspend fun getById(id: Long): ScanHistory?
 
