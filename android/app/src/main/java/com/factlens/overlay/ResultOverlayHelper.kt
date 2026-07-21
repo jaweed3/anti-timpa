@@ -17,6 +17,7 @@ object ResultOverlayHelper {
 
     fun showResult(
         context: Context,
+        claim: String,
         explanation: String,
         verdict: String,
         confidence: Double,
@@ -39,6 +40,7 @@ object ResultOverlayHelper {
                 if (intent != null) {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     intent.putExtra("open_scan_result", true)
+                    intent.putExtra("claim", claim)
                     intent.putExtra("verdict", verdict)
                     intent.putExtra("confidence", confidence)
                     intent.putExtra("explanation", explanation)

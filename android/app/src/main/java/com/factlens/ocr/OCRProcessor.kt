@@ -54,7 +54,7 @@ class OCRProcessor : IntentService("OCRProcessor") {
                     verifyText(text)
                 } else {
                     Log.w(TAG, "No text detected in image")
-                    showResult("No text detected.", "Unknown", 0.0, emptyList())
+                    showResult("", "No text detected.", "Unknown", 0.0, emptyList())
                 }
                 bitmap.recycle()
                 file.delete()
@@ -62,7 +62,7 @@ class OCRProcessor : IntentService("OCRProcessor") {
             .addOnFailureListener { e ->
                 val ocrElapsed = System.currentTimeMillis() - ocrStartTime
                 Log.e(TAG, "OCR FAILED after ${ocrElapsed}ms: ${e.message}", e)
-                showResult("OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
+                showResult("", "OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
                 bitmap.recycle()
                 file.delete()
             }
@@ -72,22 +72,23 @@ class OCRProcessor : IntentService("OCRProcessor") {
         val engine = VerdictEngine()
         try {
             val response: com.factlens.model.VerificationResponse = runBlocking { engine.verify(text) }
-            showResult(response.explanation, response.verdict, response.confidence, response.sources)
+            showResult(response.claim, response.explanation, response.verdict, response.confidence, response.sources)
             HistorySaver.saveToHistory(this, text, response)
         } catch (e: Exception) {
             Log.e(TAG, "Verification FAILED: ${e.message}", e)
-            showResult("Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
+            showResult(text, "Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
         }
     }
 
     private fun showResult(
+        claim: String,
         explanation: String,
         verdict: String,
         confidence: Double,
         sources: List<com.factlens.model.Source>
     ) {
         try {
-            ResultOverlayHelper.showResult(this, explanation, verdict, confidence, sources)
+            ResultOverlayHelper.showResult(this, claim, explanation, verdict, confidence, sources)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show result overlay: ${e.message}", e)
         }
