@@ -37,16 +37,20 @@ object ResultOverlayHelper {
             sources = sources,
             onDismiss = { dismiss() },
             onViewDetails = {
+                Log.d(TAG, "View Detail clicked, historyId=$historyId")
                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 if (intent != null) {
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     intent.putExtra("open_history_detail", true)
                     intent.putExtra("history_id", historyId)
                     intent.putExtra("claim", claim)
                     intent.putExtra("verdict", verdict)
                     intent.putExtra("confidence", confidence)
                     intent.putExtra("explanation", explanation)
+                    Log.d(TAG, "Launching app with history_id=$historyId")
                     context.startActivity(intent)
+                } else {
+                    Log.e(TAG, "getLaunchIntentForPackage returned null!")
                 }
                 dismiss()
             }
