@@ -17,6 +17,7 @@ object ResultOverlayHelper {
 
     fun showResult(
         context: Context,
+        historyId: Long,
         claim: String,
         explanation: String,
         verdict: String,
@@ -39,12 +40,12 @@ object ResultOverlayHelper {
                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 if (intent != null) {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    intent.putExtra("open_scan_result", true)
+                    intent.putExtra("open_history_detail", true)
+                    intent.putExtra("history_id", historyId)
                     intent.putExtra("claim", claim)
                     intent.putExtra("verdict", verdict)
                     intent.putExtra("confidence", confidence)
                     intent.putExtra("explanation", explanation)
-                    intent.putExtra("sources", com.google.gson.Gson().toJson(sources))
                     context.startActivity(intent)
                 }
                 dismiss()

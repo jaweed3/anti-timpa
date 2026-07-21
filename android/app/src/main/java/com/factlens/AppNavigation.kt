@@ -49,6 +49,22 @@ fun AppNavigation(activity: MainActivity) {
         }
     }
 
+    LaunchedEffect(activity.navigateToHistoryDetail) {
+        if (activity.navigateToHistoryDetail) {
+            activity.navigateToHistoryDetail = false
+            val id = activity.pendingHistoryDetailId
+            if (id > 0) {
+                val dao = HistoryDatabase.getInstance(activity).historyDao()
+                val item = dao.getById(id)
+                if (item != null) {
+                    selectedHistoryItem = item
+                    previousScreen = "history"
+                    currentScreen = "history_detail"
+                }
+            }
+        }
+    }
+
     LaunchedEffect(activity.navigateToScanResult) {
         if (activity.navigateToScanResult) {
             activity.navigateToScanResult = false

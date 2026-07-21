@@ -29,12 +29,18 @@ class MainActivity : ComponentActivity() {
         private set
     var triggerCaptureRequested by mutableStateOf(false)
     var navigateToScanResult by mutableStateOf(false)
+    var navigateToHistoryDetail by mutableStateOf(false)
+    var pendingHistoryDetailId by mutableStateOf(-1L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         if (intent?.getBooleanExtra("trigger_capture", false) == true) triggerCaptureRequested = true
         if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
+        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
+            navigateToHistoryDetail = true
+            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
+        }
 
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
         notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -66,5 +72,9 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (intent?.getBooleanExtra("trigger_capture", false) == true) triggerCaptureRequested = true
         if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
+        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
+            navigateToHistoryDetail = true
+            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
+        }
     }
 }

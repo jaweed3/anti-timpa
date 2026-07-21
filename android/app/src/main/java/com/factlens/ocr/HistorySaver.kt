@@ -11,7 +11,7 @@ private const val TAG = "FactLens.HistorySaver"
 
 object HistorySaver {
 
-    fun saveToHistory(context: android.content.Context, text: String, response: VerificationResponse) {
+    fun saveToHistory(context: android.content.Context, text: String, response: VerificationResponse): Long {
         Log.d(TAG, "Saving scan to history...")
         val gson = Gson()
         val history = ScanHistory(
@@ -22,7 +22,8 @@ object HistorySaver {
             sourcesJson = gson.toJson(response.sources)
         )
         val dao = HistoryDatabase.getInstance(context).historyDao()
-        runBlocking { dao.insert(history) }
-        Log.d(TAG, "Scan saved to history successfully")
+        val id = runBlocking { dao.insert(history) }
+        Log.d(TAG, "Scan saved to history successfully, id=$id")
+        return id
     }
 }
