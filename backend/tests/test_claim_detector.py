@@ -1,11 +1,10 @@
 import pytest
-from claim_detector import extract_claim, is_claim
+from anti_timpa.claim import extract_claim, is_claim
 
 
 def test_extract_claim_removes_urls():
-    text = "Check this https://example.com it's important"
-    result = extract_claim(text)
-    assert "https://" not in result
+    t = "Check this https://example.com it's important"
+    assert "https://" not in (extract_claim(t) or "")
 
 
 def test_extract_claim_short():
