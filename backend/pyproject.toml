@@ -1,7 +1,7 @@
 [project]
-name = "factlens-backend"
+name = "antitimpa-backend"
 version = "1.0.0"
-description = "AI-powered fact verification backend"
+description = "AntiTimpa — on-device scam/gambling/phishing detection backend"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.109.0",
@@ -15,18 +15,12 @@ dependencies = [
     "slowapi>=0.1.9",
 ]
 
-[tool.setuptools]
-py-modules = [
-    "config",
-    "main",
-    "llm_client",
-    "models",
-    "search_engine",
-    "verification_pipeline",
-    "claim_detector",
-    "ranker",
-]
-
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
