@@ -32,21 +32,8 @@
         <service
             android:name=".overlay.OverlayService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
-
-        <service
-            android:name=".capture.ScreenCaptureService"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
-
-        <activity
-            android:name=".PermissionActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:taskAffinity=""
-            android:launchMode="singleInstance"
-            android:theme="@style/Theme.FactLens.Transparent" />
+            android:foregroundServiceType="specialUse|mediaProjection"
+            tools:targetApi="34" />
 
         <service
             android:name=".ocr.OCRProcessor"

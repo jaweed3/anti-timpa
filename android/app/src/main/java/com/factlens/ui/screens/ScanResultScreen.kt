@@ -4,8 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.factlens.ui.components.ClaimInfoCard
@@ -25,6 +28,8 @@ fun ScanResultScreen(
     onSave: () -> Unit = {},
     onShare: () -> Unit = {}
 ) {
+    val flaggedItems = remember(scanResult) { parseFlaggedItems(scanResult.explanation) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,9 +58,45 @@ fun ScanResultScreen(
                 onClick = {}
             )
 
-            Spacer(Modifier.height(Spacing.lg))
+            if (flaggedItems.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.lg))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(Spacing.md)) {
+                        Text(
+                            text = "Item Terdeteksi",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(Spacing.sm))
+                        flaggedItems.forEach { item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(Spacing.sm))
+                                Text(
+                                    text = item,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (scanResult.sources.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.lg))
                 EvidenceSourcesList(sources = scanResult.sources, onOpenSource = onOpenSource)
             }
 
@@ -64,4 +105,21 @@ fun ScanResultScreen(
 
         ScanResultBottomBar(onSave = onSave, onShare = onShare)
     }
+}
+
+private fun parseFlaggedItems(explanation: String): List<String> {
+    val items = mutableListOf<String>()
+    val lines = explanation.split("\n")
+    var inFlagged = false
+    for (line in lines) {
+        val trimmed = line.trim()
+        if (trimmed == "Item terdeteksi:") {
+            inFlagged = true
+            continue
+        }
+        if (inFlagged && trimmed.startsWith("\u2022")) {
+            items.add(trimmed.removePrefix("\u2022 "))
+        }
+    }
+    return items
 }

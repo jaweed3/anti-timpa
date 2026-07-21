@@ -74,7 +74,7 @@ fun SettingsScreen(
                             Icon(Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
                         },
                         title = "Overlay Permission",
-                        desc = if (hasOverlayPermission) "Granted \u2713" else "Allow FactLens to show the floating button",
+                        desc = if (hasOverlayPermission) "Granted \u2713" else "Allow AntiTimpa to show the floating button",
                         done = hasOverlayPermission,
                         onAction = onRequestOverlay
                     )

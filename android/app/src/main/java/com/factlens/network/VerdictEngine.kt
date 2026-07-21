@@ -6,23 +6,37 @@ import com.factlens.model.VerificationResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val TAG = "FactLens.Verdict"
+private const val TAG = "AntiTimpa.Verdict"
 
 class VerdictEngine {
 
     private val searchClient = SearchClient()
 
     companion object {
-        var backendUrl: String = "http://10.0.2.2:8000"
+        var backendUrl: String = "http://192.168.120.75:8000"
         var geminiApiKey: String = ""
         var USE_MOCK: Boolean = false
+        var shouldBlurResult: Boolean = false
     }
 
     suspend fun verify(text: String): VerificationResponse = withContext(Dispatchers.IO) {
         Log.d(TAG, "VERDICT ENGINE STARTED")
         Log.d(TAG, "Input: ${text.take(80)}... | USE_MOCK=$USE_MOCK")
 
+        shouldBlurResult = false
+
         if (USE_MOCK) return@withContext mockVerdict(text)
+
+        try {
+            val scamResult = checkScam(text)
+            if (scamResult.verdict != "Supported") {
+                Log.d(TAG, "/check-scam returned non-Supported verdict, using it")
+                return@withContext scamResult
+            }
+            Log.d(TAG, "/check-scam returned Aman, falling through to /verify")
+        } catch (e: Exception) {
+            Log.w(TAG, "/check-scam failed: ${e.message}")
+        }
 
         val claim = extractClaim(text)
         val sources = searchClient.search(claim)
@@ -30,7 +44,7 @@ class VerdictEngine {
         try {
             return@withContext BackendClient().verify(claim, sources)
         } catch (e: Exception) {
-            Log.w(TAG, "Backend failed: ${e.message}")
+            Log.w(TAG, "Backend verify failed: ${e.message}")
         }
 
         if (geminiApiKey.isNotBlank()) {
@@ -45,9 +59,76 @@ class VerdictEngine {
         fallbackVerdict(claim, sources)
     }
 
+    private fun detectScamIndicators(text: String): Boolean {
+        val hasPhone = Regex("""(?:\+62|62|0)8[1-9]\d{7,11}""").containsMatchIn(text)
+        val hasAccount = Regex("""\b\d{10,16}\b""").containsMatchIn(text)
+        val hasScamKeywords = listOf(
+            "transfer", "rekening", "pinjol", "pinjaman", "dana",
+            "hadiah", "undian", "terpilih", "pinjam"
+        ).any { text.lowercase().contains(it) }
+
+        return (hasPhone && hasScamKeywords) || (hasAccount && hasScamKeywords)
+    }
+
+    private suspend fun checkScam(text: String): VerificationResponse = withContext(Dispatchers.IO) {
+        try {
+            val response = BackendClient().checkScam(text)
+
+            val mappedVerdict = when (response.verdict) {
+                "Terindikasi Penipuan" -> "Contradicted"
+                "Mencurigakan" -> "Misleading"
+                "Aman" -> "Supported"
+                else -> "Insufficient Evidence"
+            }
+
+            shouldBlurResult = response.shouldBlur
+
+            val flaggedSummary = response.flaggedItems.joinToString("\n") {
+                "\u2022 ${it.value} \u2014 ${it.reason}"
+            }
+
+            val explanationText = if (flaggedSummary.isNotEmpty()) {
+                "${response.explanation}\n\nItem terdeteksi:\n$flaggedSummary"
+            } else {
+                response.explanation
+            }
+
+            VerificationResponse(
+                claim = text.take(200),
+                verdict = mappedVerdict,
+                confidence = (response.riskScore / 100.0).coerceIn(0.0, 0.95),
+                explanation = explanationText,
+                sources = emptyList()
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Scam check failed: ${e.message}")
+            shouldBlurResult = false
+            fallbackScamVerdict(text)
+        }
+    }
+
+    private fun fallbackScamVerdict(text: String): VerificationResponse {
+        val hasPhone = Regex("""(?:\+62|62|0)8[1-9]\d{7,11}""").containsMatchIn(text)
+        val hasAccount = Regex("""\b\d{10,16}\b""").containsMatchIn(text)
+
+        val reason = when {
+            hasAccount && hasPhone -> "Nomor rekening dan telepon terdeteksi dalam teks."
+            hasAccount -> "Nomor rekening terdeteksi dalam teks."
+            hasPhone -> "Nomor telepon terdeteksi dalam teks."
+            else -> "Teks mengandung kata kunci terkait scam."
+        }
+
+        return VerificationResponse(
+            claim = text.take(200),
+            verdict = "Misleading",
+            confidence = 0.3,
+            explanation = "Terjadi kesalahan saat memeriksa ke backend. $reason Harap periksa secara manual.",
+            sources = emptyList()
+        )
+    }
+
     private fun extractClaim(text: String): String {
         val cleaned = text
-            .replace(Regex("https?://\\S+"), "")
             .replace(Regex("@\\w+"), "")
             .replace(Regex("#\\w+"), "")
             .trim()

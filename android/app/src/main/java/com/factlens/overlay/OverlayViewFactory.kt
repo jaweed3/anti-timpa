@@ -2,6 +2,7 @@ package com.factlens.overlay
 
 import android.content.Context
 import android.view.View
+import com.factlens.model.FlaggedItem
 import com.factlens.model.Source
 
 object OverlayViewFactory {
@@ -13,7 +14,8 @@ object OverlayViewFactory {
         confidence: Double,
         sources: List<Source>,
         onDismiss: () -> Unit,
-        onViewDetails: () -> Unit
+        onViewDetails: () -> Unit,
+        flaggedItems: List<FlaggedItem> = emptyList()
     ): View {
         val density = context.resources.displayMetrics.density
         val px = { v: Int -> (v * density).toInt() }
@@ -24,6 +26,9 @@ object OverlayViewFactory {
         card.addView(OverlayCardViewFactory.createBadge(context, verdict, verdictColor, px))
         card.addView(OverlayCardViewFactory.createConfidenceText(context, confidence, verdictColor, px))
         card.addView(OverlayCardViewFactory.createVerdictLabel(context, verdict, px))
+        if (flaggedItems.isNotEmpty()) {
+            card.addView(OverlayCardViewFactory.createFlaggedItemsView(context, flaggedItems, px))
+        }
         if (explanation.isNotEmpty()) {
             card.addView(OverlayCardViewFactory.createExplanationView(context, explanation, px))
         }

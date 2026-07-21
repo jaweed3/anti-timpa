@@ -25,15 +25,15 @@ fun SetupLogoHeader() {
             .background(FactLensColors.primary),
         contentAlignment = Alignment.Center
     ) {
-        Text("F", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        Text("AT", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
     }
 
     Spacer(Modifier.height(Spacing.lg))
 
-    Text("FactLens", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
+    Text("AntiTimpa", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
     Spacer(Modifier.height(Spacing.xs))
     Text(
-        "Verify information directly from your screen",
+        "Blur scams before they blur your judgment",
         fontSize = 14.sp,
         color = FactLensColors.neutralGray,
         textAlign = TextAlign.Center

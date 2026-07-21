@@ -50,7 +50,7 @@ fun HomeScreen(
         ) {
             Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
             Spacer(Modifier.width(Spacing.md))
-            Text("FactLens", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
+            Text("AntiTimpa", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
             Spacer(Modifier.weight(1f))
             Row(
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(FactLensColors.surfaceContainerHigh).padding(horizontal = Spacing.md, vertical = Spacing.xs),
@@ -58,7 +58,7 @@ fun HomeScreen(
             ) {
                 Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(FactLensColors.successEmerald))
                 Spacer(Modifier.width(Spacing.xs))
-                Text("System Ready", fontSize = 12.sp, color = FactLensColors.onSurfaceVariant)
+                Text("Ready", fontSize = 12.sp, color = FactLensColors.onSurfaceVariant)
             }
         }
 
@@ -72,7 +72,7 @@ fun HomeScreen(
             Spacer(Modifier.height(Spacing.md))
             if (recentScans.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                    Text("No recent scans yet.\nTap the floating F button to verify something!", color = FactLensColors.neutralGray, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    Text("Belum ada scan.\nTekan & tahan tombol F (2 detik) di layar mana pun\nuntuk mulai scan.", color = FactLensColors.neutralGray, fontSize = 14.sp, textAlign = TextAlign.Center)
                 }
             } else {
                 recentScans.forEach { item ->
@@ -92,7 +92,7 @@ fun HomeScreen(
             Spacer(Modifier.height(Spacing.md))
             if (recentFavorites.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                    Text("No saved results yet.\nSave a result to see it here.", color = FactLensColors.neutralGray, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    Text("Belum ada hasil tersimpan.\nSimpan hasil scan untuk dilihat di sini.", color = FactLensColors.neutralGray, fontSize = 14.sp, textAlign = TextAlign.Center)
                 }
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {

@@ -7,9 +7,10 @@ import android.os.Build
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import com.factlens.model.FlaggedItem
 import com.factlens.model.Source
 
-private const val TAG = "FactLens.ResultOverlay"
+private const val TAG = "AntiTimpa.ResultOverlay"
 
 object ResultOverlayHelper {
 
@@ -22,9 +23,11 @@ object ResultOverlayHelper {
         explanation: String,
         verdict: String,
         confidence: Double,
-        sources: List<Source>
+        sources: List<Source>,
+        flaggedItems: List<FlaggedItem> = emptyList()
     ) {
         Log.d(TAG, "Showing result overlay: verdict=$verdict, confidence=$confidence, sources=${sources.size}")
+        ScreenBlurOverlay.dismiss()
         dismiss()
 
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
@@ -53,7 +56,8 @@ object ResultOverlayHelper {
                     Log.e(TAG, "getLaunchIntentForPackage returned null!")
                 }
                 dismiss()
-            }
+            },
+            flaggedItems = flaggedItems
         )
 
         val params = WindowManager.LayoutParams(

@@ -41,27 +41,10 @@ fun AppNavigation(activity: MainActivity) {
     var scanResultHistoryId by remember { mutableStateOf<Long?>(null) }
     var previousScreen by remember { mutableStateOf("home") }
 
-    LaunchedEffect(activity.triggerCaptureRequested) {
-        if (activity.triggerCaptureRequested) {
-            activity.triggerCaptureRequested = false
-            val manager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return@LaunchedEffect
-            activity.mediaProjectionLauncher.launch(manager.createScreenCaptureIntent())
-        }
-    }
-
     LaunchedEffect(activity.navigateToHistoryDetail) {
         if (activity.navigateToHistoryDetail) {
+            currentScreen = "history"
             activity.navigateToHistoryDetail = false
-            val id = activity.pendingHistoryDetailId
-            if (id > 0) {
-                val dao = HistoryDatabase.getInstance(activity).historyDao()
-                val item = dao.getById(id)
-                if (item != null) {
-                    selectedHistoryItem = item
-                    previousScreen = "history"
-                    currentScreen = "history_detail"
-                }
-            }
         }
     }
 
@@ -170,7 +153,7 @@ fun AppNavigation(activity: MainActivity) {
                         }
                     },
                     onShare = {
-                        val text = "FactLens Verification:\n\"${result.claim}\"\nVerdict: ${result.verdict}\nConfidence: ${(result.confidence * 100).toInt()}%\n${result.explanation}"
+                        val text = "AntiTimpa Verification:\n\"${result.claim}\"\nVerdict: ${result.verdict}\nConfidence: ${(result.confidence * 100).toInt()}%\n${result.explanation}"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             this.type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, text)
@@ -193,7 +176,7 @@ fun AppNavigation(activity: MainActivity) {
                         }
                     },
                     onShare = {
-                        val text = "FactLens Verification:\n\"${item.claim}\"\nVerdict: ${item.verdict}\nConfidence: ${(item.confidence * 100).toInt()}%\n${item.explanation}"
+                        val text = "AntiTimpa Verification:\n\"${item.claim}\"\nVerdict: ${item.verdict}\nConfidence: ${(item.confidence * 100).toInt()}%\n${item.explanation}"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             this.type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, text)
