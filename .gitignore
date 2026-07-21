@@ -26,3 +26,6 @@ Thumbs.db
 # Env
 .env
 local.properties
+
+# graphify artifact
+graphify-out/
