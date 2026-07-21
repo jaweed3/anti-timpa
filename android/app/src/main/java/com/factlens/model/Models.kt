@@ -36,3 +36,11 @@ data class ScanHistory(
     val screenshotPath: String? = null,
     val isFavorite: Boolean = false
 )
+
+data class ScanResultData(
+    val claim: String = "",
+    val verdict: String,
+    val confidence: Double,
+    val explanation: String,
+    val sources: List<Source>
+)

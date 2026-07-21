@@ -3,168 +3,80 @@ package com.factlens.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.factlens.ui.components.HistoryCard
+import com.factlens.history.HistoryDatabase
+import com.factlens.model.ScanHistory
+import com.factlens.ui.components.HistoryEmptyState
+import com.factlens.ui.components.HistorySearchBar
+import com.factlens.ui.components.HistorySection
+import com.factlens.ui.components.HistoryTopBar
 import com.factlens.ui.theme.FactLensColors
 import com.factlens.ui.theme.Spacing
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HistoryScreen(
-    onScanResult: () -> Unit
+    onScanResult: () -> Unit,
+    onHistoryItemClick: (ScanHistory) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val dao = remember { HistoryDatabase.getInstance(context).historyDao() }
+    val allHistory by dao.getAll().collectAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FactLensColors.backgroundAlmostWhite)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                .height(56.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("FactLens", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
-            Spacer(Modifier.weight(1f))
-            Icon(
-                Icons.Filled.Bookmark,
-                contentDescription = "Bookmark",
-                modifier = Modifier.size(24.dp),
-                tint = FactLensColors.onSurfaceVariant
-            )
-        }
+    val filteredHistory = remember(allHistory, searchQuery) {
+        if (searchQuery.isBlank()) allHistory
+        else allHistory.filter { it.claim.contains(searchQuery, ignoreCase = true) }
+    }
 
+    val grouped = remember(filteredHistory) {
+        val cal = Calendar.getInstance()
+        val fmt = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        val todayStr = fmt.format(cal.time)
+        cal.add(Calendar.DAY_OF_YEAR, -1)
+        val yesterdayStr = fmt.format(cal.time)
+        val today = mutableListOf<ScanHistory>()
+        val yesterday = mutableListOf<ScanHistory>()
+        val older = mutableListOf<ScanHistory>()
+        for (item in filteredHistory) {
+            when (fmt.format(Date(item.timestamp))) {
+                todayStr -> today.add(item)
+                yesterdayStr -> yesterday.add(item)
+                else -> older.add(item)
+            }
+        }
+        Triple(today, yesterday, older)
+    }
+
+    val timeFmt = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(FactLensColors.backgroundAlmostWhite)
+    ) {
+        HistoryTopBar()
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = Spacing.lg)
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.lg).verticalScroll(rememberScrollState())
         ) {
             Spacer(Modifier.height(Spacing.sm))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(FactLensColors.surfaceContainerLow)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.lg),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Filled.Search,
-                        contentDescription = "Search",
-                        modifier = Modifier.size(20.dp),
-                        tint = FactLensColors.outline
-                    )
-                    Spacer(Modifier.width(Spacing.md))
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text("Search history...", color = FactLensColors.outline, fontSize = 14.sp)
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        textStyle = LocalTextStyle.current.copy(
-                            color = FactLensColors.onSurface,
-                            fontSize = 14.sp
-                        ),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        singleLine = true
-                    )
-                }
+            HistorySearchBar(searchQuery = searchQuery, onSearchQueryChange = { searchQuery = it })
+            Spacer(Modifier.height(Spacing.xl))
+
+            if (filteredHistory.isEmpty()) {
+                HistoryEmptyState(searchQuery = searchQuery)
             }
 
-            Spacer(Modifier.height(Spacing.xl))
-
-            SectionHeaderHistory("Today")
-            Spacer(Modifier.height(Spacing.md))
-
-            HistoryCard(
-                claim = "\"Studies show that drinking 5 liters of water a day reverses aging by 20 years within a week.\"",
-                time = "10:45 AM",
-                verdict = "False",
-                sourceLabel = "Web verification",
-                onClick = onScanResult
-            )
-            Spacer(Modifier.height(Spacing.md))
-            HistoryCard(
-                claim = "NASA's Voyager 1 is the first spacecraft to reach interstellar space.",
-                time = "9:12 AM",
-                verdict = "Verified",
-                sourceLabel = "Source: NASA.gov",
-                onClick = onScanResult
-            )
-
-            Spacer(Modifier.height(Spacing.xl))
-
-            SectionHeaderHistory("Yesterday")
-            Spacer(Modifier.height(Spacing.md))
-
-            HistoryCard(
-                claim = "New tax law proposed to eliminate all property taxes by 2025.",
-                time = "4:30 PM",
-                verdict = "Misleading",
-                sourceLabel = "Partial context missing",
-                onClick = onScanResult
-            )
-            Spacer(Modifier.height(Spacing.md))
-            HistoryCard(
-                claim = "Electric vehicles cause more pollution than diesel trucks due to battery manufacturing.",
-                time = "2:15 PM",
-                verdict = "False",
-                sourceLabel = "Scientific consensus",
-                onClick = onScanResult
-            )
-            Spacer(Modifier.height(Spacing.md))
-            HistoryCard(
-                claim = "Honey never spoils. Archaeologists have found edible honey in ancient Egyptian tombs.",
-                time = "10:00 AM",
-                verdict = "Verified",
-                sourceLabel = "Historical Fact",
-                onClick = onScanResult
-            )
-
-            Spacer(Modifier.height(Spacing.xxxl))
+            val (todayItems, yesterdayItems, olderItems) = grouped
+            HistorySection(title = "Today", items = todayItems, timeFmt = timeFmt, onItemClick = onHistoryItemClick)
+            HistorySection(title = "Yesterday", items = yesterdayItems, timeFmt = timeFmt, onItemClick = onHistoryItemClick)
+            HistorySection(title = "Older", items = olderItems, timeFmt = timeFmt, onItemClick = onHistoryItemClick)
         }
-    }
-}
-
-@Composable
-private fun SectionHeaderHistory(title: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = FactLensColors.onSurface
-        )
-        Spacer(Modifier.width(Spacing.md))
-        Divider(
-            modifier = Modifier.weight(1f),
-            color = FactLensColors.outlineVariant,
-            thickness = 1.dp
-        )
     }
 }

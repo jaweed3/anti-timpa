@@ -10,20 +10,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.factlens.ui.components.AppVersionFooter
+import com.factlens.ui.components.SettingsRow
+import com.factlens.ui.components.SettingsToggleRow
 import com.factlens.ui.theme.FactLensColors
 import com.factlens.ui.theme.Spacing
 
 @Composable
 fun SettingsScreen(
     hasOverlayPermission: Boolean,
-    onRequestOverlay: () -> Unit
+    onRequestOverlay: () -> Unit,
+    overlayVisible: Boolean = true,
+    onToggleOverlay: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -65,12 +71,7 @@ fun SettingsScreen(
 
                     SettingsRow(
                         icon = {
-                            Icon(
-                                Icons.Filled.Security,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = FactLensColors.primary
-                            )
+                            Icon(Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
                         },
                         title = "Overlay Permission",
                         desc = if (hasOverlayPermission) "Granted \u2713" else "Allow FactLens to show the floating button",
@@ -79,79 +80,48 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.height(Spacing.md))
 
-                    SettingsRow(
+                    SettingsToggleRow(
                         icon = {
                             Icon(
-                                Icons.Filled.Key,
+                                if (overlayVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
-                                tint = FactLensColors.primary
+                                tint = if (overlayVisible) FactLensColors.primary else FactLensColors.neutralGray
                             )
                         },
-                        title = "Gemini API Key",
-                        desc = "Add API key for AI-powered verification",
-                        done = false,
-                        onAction = { /* TODO */ }
+                        title = "Show Floating Button",
+                        desc = if (overlayVisible) "Floating button is visible on screen" else "Floating button is hidden",
+                        checked = overlayVisible,
+                        onToggle = onToggleOverlay
                     )
                     Spacer(Modifier.height(Spacing.md))
 
                     SettingsRow(
                         icon = {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = FactLensColors.errorRed
-                            )
+                            Icon(Icons.Filled.Key, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
+                        },
+                        title = "Gemini API Key",
+                        desc = "Add API key for AI-powered verification",
+                        done = false,
+                        onAction = { }
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+
+                    SettingsRow(
+                        icon = {
+                            Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.errorRed)
                         },
                         title = "Clear History",
                         desc = "Delete all scan history and saved results",
                         done = false,
-                        onAction = { /* TODO */ }
+                        onAction = { }
                     )
                 }
             }
 
             Spacer(Modifier.weight(1f))
-
-            Text(
-                "FactLens v1.1\nVerify information directly from your screen",
-                fontSize = 13.sp,
-                color = FactLensColors.neutralGray,
-                textAlign = TextAlign.Center
-            )
+            AppVersionFooter()
             Spacer(Modifier.height(Spacing.xl))
-        }
-    }
-}
-
-@Composable
-fun SettingsRow(
-    icon: @Composable () -> Unit,
-    title: String,
-    desc: String,
-    done: Boolean,
-    onAction: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        icon()
-        Spacer(Modifier.width(Spacing.md))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = FactLensColors.onSurface)
-            Text(desc, fontSize = 12.sp, color = FactLensColors.neutralGray)
-        }
-        if (!done) {
-            Button(
-                onClick = onAction,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = FactLensColors.primary),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                Text("Allow", fontSize = 12.sp)
-            }
         }
     }
 }
