@@ -16,6 +16,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
@@ -44,6 +45,7 @@ class OverlayService : Service() {
     private var captureHandlerThread: HandlerThread? = null
     private var captureHandler: Handler? = null
     private var displayMetrics: DisplayMetrics? = null
+    private var captureTimeout: Handler? = null
 
     private val overlayReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -197,24 +199,32 @@ class OverlayService : Service() {
 
     private fun startCapture() {
         Log.d(TAG, ">>> startCapture() called")
-        indicatorHelper?.showScanningIndicator()
+        ScreenBlurOverlay.showScanningOverlay(this)
 
         if (!ensureProjectionAndDisplay()) {
             Log.e(TAG, "No projection available, re-requesting")
-            indicatorHelper?.hideScanningIndicator()
+            ScreenBlurOverlay.dismiss()
             triggerCapture()
             return
         }
 
+        captureTimeout?.removeCallbacksAndMessages(null)
+        captureTimeout = Handler(Looper.getMainLooper())
+        captureTimeout?.postDelayed({
+            Log.w(TAG, "Capture timeout after 30s — dismissing blur")
+            ScreenBlurOverlay.dismiss()
+        }, 30000L)
+
         var captured = false
 
         val completeCapture = { image: Image? ->
+            captureTimeout?.removeCallbacksAndMessages(null)
             if (image != null) {
                 processAndSaveImage(image)
             } else {
                 Log.w(TAG, "No image captured")
+                ScreenBlurOverlay.dismiss()
             }
-            indicatorHelper?.hideScanningIndicator()
         }
 
         imageReader?.setOnImageAvailableListener({ reader ->
@@ -245,7 +255,11 @@ class OverlayService : Service() {
             image.close()
             bitmap.recycle()
 
-            val file = File(cacheDir, "factlens_screenshot_${System.currentTimeMillis()}.png")
+            ScreenBlurOverlay.updateToBlurredScreenshot(this, cropped)
+
+            val screenshotDir = File(filesDir, "screenshots")
+            if (!screenshotDir.exists()) screenshotDir.mkdirs()
+            val file = File(screenshotDir, "factlens_screenshot_${System.currentTimeMillis()}.png")
             FileOutputStream(file).use { out -> cropped.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, out) }
             Log.d(TAG, "Screenshot saved: ${file.absolutePath} (${file.length()} bytes)")
             cropped.recycle()
@@ -255,6 +269,7 @@ class OverlayService : Service() {
             startService(ocrIntent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process image: ${e.message}")
+            ScreenBlurOverlay.dismiss()
         }
     }
 
@@ -262,6 +277,7 @@ class OverlayService : Service() {
         try { virtualDisplay?.release() } catch (_: Exception) {}
         try { imageReader?.close() } catch (_: Exception) {}
         captureHandlerThread?.quitSafely()
+        captureTimeout?.removeCallbacksAndMessages(null)
         mediaProjection?.stop()
         mediaProjection = null
         virtualDisplay = null
@@ -269,6 +285,7 @@ class OverlayService : Service() {
         captureHandler = null
         captureHandlerThread = null
         displayMetrics = null
+        captureTimeout = null
     }
 
     private fun createNotificationChannel() {

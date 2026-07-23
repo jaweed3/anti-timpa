@@ -44,8 +44,6 @@ class OCRProcessor : IntentService("OCRProcessor") {
             return
         }
 
-        ScreenBlurOverlay.showBlur(this, bitmap)
-
         val image = InputImage.fromBitmap(bitmap, 0)
 
         val ocrStartTime = System.currentTimeMillis()
@@ -56,28 +54,26 @@ class OCRProcessor : IntentService("OCRProcessor") {
                 Log.d(TAG, "OCR completed in ${ocrElapsed}ms")
 
                 if (text.isNotBlank()) {
-                    verifyText(text)
+                    verifyText(text, imagePath)
                 } else {
                     Log.w(TAG, "No text detected in image")
                     showResult(-1L, "", "No text detected.", "Unknown", 0.0, emptyList(), emptyList())
                 }
                 bitmap.recycle()
-                file.delete()
             }
             .addOnFailureListener { e ->
                 val ocrElapsed = System.currentTimeMillis() - ocrStartTime
                 Log.e(TAG, "OCR FAILED after ${ocrElapsed}ms: ${e.message}", e)
                 showResult(-1L, "", "OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList(), emptyList())
                 bitmap.recycle()
-                file.delete()
             }
     }
 
-    private fun verifyText(text: String) {
+    private fun verifyText(text: String, screenshotPath: String) {
         val engine = VerdictEngine()
         try {
             val response = runBlocking { engine.verify(text) }
-            val historyId = HistorySaver.saveToHistory(this, text, response)
+            val historyId = HistorySaver.saveToHistory(this, text, response, screenshotPath)
             val flaggedItems = parseFlaggedItems(response)
 
             showResult(historyId, response.claim, response.explanation,
@@ -118,6 +114,7 @@ class OCRProcessor : IntentService("OCRProcessor") {
         sources: List<com.factlens.model.Source>,
         flaggedItems: List<FlaggedItem>
     ) {
+        ScreenBlurOverlay.hideProgress()
         try {
             ResultOverlayHelper.showResult(this, historyId, claim, explanation, verdict,
                 confidence, sources, flaggedItems)

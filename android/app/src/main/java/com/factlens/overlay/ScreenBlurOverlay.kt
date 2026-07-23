@@ -11,65 +11,84 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.Gravity
-import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.ProgressBar
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "AntiTimpa.Blur"
 
 object ScreenBlurOverlay {
 
-    private var currentView: View? = null
-    private var blurredBitmap: Bitmap? = null
+    private var containerView: FrameLayout? = null
+    private var progressBar: ProgressBar? = null
+    private var blurredImageView: ImageView? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pendingShow = AtomicBoolean(false)
 
-    fun showBlur(context: Context, screenshot: Bitmap) {
-        val blurred = blurBitmap(screenshot, 25f)
-
-        val imageView = ImageView(context).apply {
-            setImageBitmap(blurred)
-            scaleType = ImageView.ScaleType.FIT_XY
-        }
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_DIM_BEHIND,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.BOTTOM
-            dimAmount = 0.3f
-        }
-
+    fun showScanningOverlay(context: Context) {
         pendingShow.set(true)
         mainHandler.post {
-            if (!pendingShow.getAndSet(false)) {
-                if (!blurred.isRecycled) blurred.recycle()
-                return@post
+            if (!pendingShow.getAndSet(false)) return@post
+            dismissInternal()
+
+            val progress = ProgressBar(context, null, android.R.attr.progressBarStyleLarge).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER
+                )
             }
+            progressBar = progress
+
+            val container = FrameLayout(context).apply {
+                setBackgroundColor(0x80CC0000.toInt())
+                addView(progress)
+            }
+            containerView = container
+
             try {
-                dismissInternal()
-                val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-                if (wm != null) {
-                    wm.addView(imageView, params)
-                    currentView = imageView
-                    blurredBitmap = blurred
-                    Log.d(TAG, "Blur overlay shown")
-                } else {
-                    if (!blurred.isRecycled) blurred.recycle()
-                    Log.e(TAG, "WindowManager is null")
-                }
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.addView(container, createLayoutParams())
+                Log.d(TAG, "Scanning overlay shown (red + progress)")
             } catch (e: Exception) {
-                if (!blurred.isRecycled) blurred.recycle()
-                Log.e(TAG, "Failed to show blur overlay: ${e.message}")
+                Log.e(TAG, "Failed to show scanning overlay: ${e.message}")
+                containerView = null
+                progressBar = null
+            }
+        }
+    }
+
+    fun updateToBlurredScreenshot(context: Context, bitmap: Bitmap) {
+        mainHandler.post {
+            val container = containerView ?: return@post
+
+            blurredImageView?.let { container.removeView(it) }
+
+            val blurred = blurBitmap(bitmap, 25f)
+            val bgView = ImageView(context).apply {
+                setImageBitmap(blurred)
+                scaleType = ImageView.ScaleType.FIT_XY
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            }
+            blurredImageView = bgView
+            container.addView(bgView, 0)
+
+            container.setBackgroundColor(0x00000000.toInt())
+            Log.d(TAG, "Blur overlay updated to blurred screenshot")
+        }
+    }
+
+    fun hideProgress() {
+        mainHandler.post {
+            progressBar?.let {
+                (it.parent as? FrameLayout)?.removeView(it)
+                progressBar = null
+                Log.d(TAG, "Progress indicator hidden")
             }
         }
     }
@@ -79,18 +98,33 @@ object ScreenBlurOverlay {
         mainHandler.post { dismissInternal() }
     }
 
+    fun isShowing(): Boolean = containerView != null
+
     private fun dismissInternal() {
-        currentView?.let { view ->
+        containerView?.let { view ->
             try {
-                val wm = view.context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-                wm?.removeView(view)
+                val wm = view.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(view)
+                Log.d(TAG, "Blur overlay dismissed")
             } catch (_: Exception) {}
-            currentView = null
+            containerView = null
+            progressBar = null
+            blurredImageView = null
         }
-        blurredBitmap?.let {
-            if (!it.isRecycled) it.recycle()
-            blurredBitmap = null
-        }
+    }
+
+    private fun createLayoutParams(): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        )
     }
 
     private fun blurBitmap(bitmap: Bitmap, radius: Float): Bitmap {

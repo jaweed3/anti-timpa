@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.factlens.capture.ScreenCaptureManager
+import com.factlens.network.VerdictEngine
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import com.factlens.history.HistoryDatabase
@@ -40,6 +41,20 @@ fun AppNavigation(activity: MainActivity) {
     var selectedHistoryItem by remember { mutableStateOf<ScanHistory?>(null) }
     var scanResultHistoryId by remember { mutableStateOf<Long?>(null) }
     var previousScreen by remember { mutableStateOf("home") }
+    var backendUrl by remember {
+        mutableStateOf(
+            activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+                .getString("backend_url", VerdictEngine.backendUrl) ?: VerdictEngine.backendUrl
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        val savedUrl = activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+            .getString("backend_url", null)
+        if (savedUrl != null) {
+            VerdictEngine.backendUrl = savedUrl
+        }
+    }
 
     LaunchedEffect(activity.navigateToHistoryDetail) {
         if (activity.navigateToHistoryDetail) {
@@ -135,6 +150,13 @@ fun AppNavigation(activity: MainActivity) {
                         activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
                             .edit().putBoolean("overlay_visible", visible).apply()
                         toggleOverlayCallback?.invoke(visible)
+                    },
+                    backendUrl = backendUrl,
+                    onSaveBackendUrl = { newUrl ->
+                        backendUrl = newUrl
+                        VerdictEngine.backendUrl = newUrl
+                        activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+                            .edit().putString("backend_url", newUrl).apply()
                     }
                 )
             }

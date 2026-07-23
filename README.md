@@ -1,161 +1,49 @@
-# FactLens
+# AntiTimpa
 
-> Verify information directly from your screen.
+> **Blur scams before they blur your judgment.**
+>
+> Scam detector Android app. Tap & hold FAB → blur overlay → OCR → backend check → verdict.
 
-FactLens is an AI-powered Android application that lets you verify suspicious information **without leaving your current app**. Tap the floating overlay button while browsing Instagram, TikTok, X, WhatsApp, or any app — FactLens captures the screen, extracts claims using OCR, retrieves evidence from trusted sources, and presents an AI-powered verdict in seconds.
-
-Built for **Gemini AI Hackathon 2025**.
-
----
-
-## ✨ Features
-
-- **Floating Overlay** — Always-accessible "F" button that works across any app
-- **Screen Capture** — One-tap capture via Android MediaProjection API
-- **On-Device OCR** — Google ML Kit text recognition (English + Indonesian)
-- **Claim Detection** — Extracts factual claims, filters opinions/jokes/ads
-- **Evidence Retrieval** — Searches trusted sources (Reuters, AP, BBC, WHO, academic, government)
-- **AI Verdict** — 6 verdict types with confidence scores and source-backed explanations
-- **History** — Room database stores all scans locally
-- **No Login Required** — Zero friction, open and use
-
-### Verdict Types
-
-| Verdict | Meaning |
-|---|---|
-| **Supported** | Evidence supports the claim |
-| **Contradicted** | Evidence contradicts the claim |
-| **Misleading** | Claim is partially true but presented deceptively |
-| **Mixed** | Evidence is conflicting |
-| **Insufficient Evidence** | Not enough reliable sources found |
-| **Unknown** | Could not process |
+A floating overlay button appears on top of any app (IG, WA, TikTok, etc.). Long-press 2 seconds → screen gets blurred → OCR reads the text → backend checks for scam patterns → result card shows verdict (Aman/Mencurigakan/Terindikasi Penipuan) with flagged items.
 
 ---
 
-## 🏗 Architecture
+## Quick Start
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Android App                     │
-│  ┌─────────┐  ┌──────────┐  ┌────────────────┐ │
-│  │ Overlay  │→│ Capture  │→│  ML Kit OCR    │ │
-│  │ Service  │  │ Service  │  │  (on-device)   │ │
-│  └─────────┘  └──────────┘  └───────┬────────┘ │
-│                                      │           │
-│  ┌───────────────────────────────────▼────────┐ │
-│  │           Retrofit HTTP Client             │ │
-│  └───────────────────┬───────────────────────┘ │
-└──────────────────────┼──────────────────────────┘
-                       │ POST /verify
-┌──────────────────────▼──────────────────────────┐
-│               FastAPI Backend                    │
-│  ┌─────────┐  ┌──────────┐  ┌────────────────┐ │
-│  │  Claim  │→│  Search  │→│  LLM Verdict   │ │
-│  │ Detector│  │  Engine  │  │ (OpenAI/Gemini)│ │
-│  └─────────┘  └──────────┘  └────────────────┘ │
-│                ┌──────────┐                     │
-│                │  Ranker  │                     │
-│                └──────────┘                     │
-└─────────────────────────────────────────────────┘
-```
+**1. Install APK** — `./gradlew assembleDebug` → deploy via Android Studio or `adb install`
 
----
-
-## 🚀 Quick Start
-
-### Backend
-
+**2. Backend** (Person A):
 ```bash
-cd backend
-
-# Install dependencies
+cd backend/anti_timpa
 pip install -r requirements.txt
-
-# Optional: set API key for AI verdicts
-cp .env.example .env
-# Edit .env and add OPENAI_API_KEY or GEMINI_API_KEY
-
-# Run server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn anti_timpa.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> **No API key?** The backend falls back to returning sources without AI analysis — still functional, just less polished.
-
-### Docker
-
-```bash
-docker-compose up --build
-```
-
-### Android App
-
-1. Open `android/` in Android Studio
-2. Sync Gradle
-3. Run on device/emulator (API 27+)
-4. Grant overlay permission → tap "Allow"
-5. Tap "Start Overlay" → the "F" button appears
-6. Navigate to any app, tap "F" to verify
-
-> **Note:** The app connects to `10.0.2.2:8000` (emulator → host). For a physical device, change `BASE_URL` in `android/app/src/main/java/com/factlens/network/FactLensApi.kt` to your server's IP.
+**3. Run** — Grant overlay + screen recording permission → FAB appears → hold "F" button 2s
 
 ---
 
-## 🧪 Tests
+## Stack
 
-```bash
-cd backend
-python -m pytest tests/ -v
+| Layer | Tech |
+|-------|------|
+| Android | Kotlin, Compose, WindowManager, ML Kit OCR, Room, OkHttp |
+| Backend | Python FastAPI, NaraRouter (OpenAI-compatible LLM) |
+| Database | Room (local), none on backend (stateless) |
+
+---
+
+## Repo Structure
+
+```
+android/      → Android app (Kotlin)
+backend/      → Python backend (FastAPI)
+AGENTS.md     → Technical reference for AI agents (module map, architecture, gotchas)
+specs.md      → Original product specification
 ```
 
 ---
 
-## 🛠 Tech Stack
+For detailed architecture, module map, key decisions, and gotchas → see [`AGENTS.md`](AGENTS.md).
 
-| Layer | Technology |
-|---|---|
-| Mobile | Kotlin, Jetpack Compose, Coroutines |
-| OCR | Google ML Kit (on-device) |
-| Backend | FastAPI (Python) |
-| LLM | OpenAI GPT-4o-mini / Gemini 1.5 Flash |
-| Search | DuckDuckGo (no API key needed) |
-| Storage | Room (Android), in-memory (backend) |
-| Deploy | Docker, docker-compose |
-
----
-
-## 📁 Project Structure
-
-```
-├── android/                    # Android app (Kotlin + Compose)
-│   ├── app/src/main/java/com/factlens/
-│   │   ├── MainActivity.kt           # Permission setup UI
-│   │   ├── overlay/                  # Floating button + result card
-│   │   ├── capture/                  # MediaProjection screen capture
-│   │   ├── ocr/                      # ML Kit text recognition
-│   │   ├── network/                  # Retrofit API client
-│   │   ├── history/                  # Room database
-│   │   └── model/                    # Data classes
-│   └── build.gradle.kts
-├── backend/                    # FastAPI verification engine
-│   ├── main.py                 # API server
-│   ├── verification_pipeline.py # End-to-end pipeline
-│   ├── claim_detector.py       # Claim extraction
-│   ├── search_engine.py        # DuckDuckGo search
-│   ├── ranker.py               # Source ranking
-│   ├── llm_client.py           # OpenAI / Gemini client
-│   └── tests/                  # pytest tests
-├── docker-compose.yml
-└── README.md
-```
-
----
-
-## 👥 Team FactLens
-
-Built for **Gemini AI Hackathon 2025**.
-
----
-
-## 📄 License
-
-MIT
+For backend API docs → see [`backend/API.md`](backend/API.md).

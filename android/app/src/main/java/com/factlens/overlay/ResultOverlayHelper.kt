@@ -27,8 +27,7 @@ object ResultOverlayHelper {
         flaggedItems: List<FlaggedItem> = emptyList()
     ) {
         Log.d(TAG, "Showing result overlay: verdict=$verdict, confidence=$confidence, sources=${sources.size}")
-        ScreenBlurOverlay.dismiss()
-        dismiss()
+        dismissInternal()
 
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
 
@@ -82,6 +81,11 @@ object ResultOverlayHelper {
     }
 
     fun dismiss() {
+        dismissInternal()
+        ScreenBlurOverlay.dismiss()
+    }
+
+    private fun dismissInternal() {
         currentView?.let { view ->
             Log.d(TAG, "Dismissing result overlay")
             view.context.sendBroadcast(Intent("com.factlens.SCAN_COMPLETE"))
