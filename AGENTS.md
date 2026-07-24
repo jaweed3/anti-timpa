@@ -117,7 +117,7 @@ root/
 | File | Role |
 |------|------|
 | `MainActivity.kt` | Single Activity. Permission launchers (overlay, notification, media projection). Launch service. |
-| `AppNavigation.kt` | Navigation state (setup, home, scanning, history, settings, etc.). Backend URL loaded from SharedPreferences. |
+| `AppNavigation.kt` | Navigation state (setup, home, scanning, history, settings, etc.). `BackHandler` intercepts system back — only exits app from `home` or `setup`. Backend URL loaded from SharedPreferences. |
 | `FactLensApp.kt` | Application class |
 
 ---
@@ -134,9 +134,12 @@ hasProjection()?
   ↓
 startCapture():
   1. ScreenBlurOverlay.showScanningOverlay(this)  // merah + spinner tengah
-  2. ensureProjectionAndDisplay()                  // getMediaProjection + VirtualDisplay
-  3. setOnImageAvailableListener + 500ms fallback  // capture screenshot
-  ↓ timeout 30s → ScreenBlurOverlay.dismiss()
+  2. ensureMediaProjection()                       // getMediaProjection (companion token)
+  3. ensureVirtualDisplay()                        // createVirtualDisplay + ImageReader
+  4. setOnImageAvailableListener + 500ms fallback  // capture screenshot
+  ↓ timeout 30s → releaseVirtualDisplay() + ScreenBlurOverlay.dismiss()
+  ↓
+completeCapture → releaseVirtualDisplay()          // VD dilepas, recording indicator ilang (≤13)
   ↓
 processAndSaveImage():
   1. Image planes → ARGB_8888 bitmap
@@ -161,6 +164,14 @@ User tap Dismiss:
   ResultOverlayHelper.dismiss()
   → remove result card → sendBroadcast(SCAN_COMPLETE)
   → ScreenBlurOverlay.dismiss()  // blur ilang
+
+┌── Android 14 Re-scan ─────────────────────────────────────────┐
+│ ensureVirtualDisplay() gagal (VD exhausted per projection)     │
+│   → releaseMediaProjection() + clearProjection()               │
+│   → triggerCapture() → system dialog re-grant                  │
+│   → new MediaProjection + new VirtualDisplay → capture works   │
+│   → tiap 2 scan sekali re-grant (unavoidable)                  │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -293,9 +304,14 @@ Flow: red (scanning) → blurred screenshot (captured) → hide spinner → show
 Backend Python returns `risk_score`, `flagged_items`, `should_blur`.
 NOT camelCase. Android client must match exactly.
 
-### Why non-typed startForeground?
-Device test toleran ke `startForeground(1, notif)` tanpa `FOREGROUND_SERVICE_TYPE`.
-Typed `SPECIAL_USE` menyebabkan `getMediaProjection()` crash di device ini.
+### Why `foregroundServiceType` includes `mediaProjection` even if it causes crashes?
+Android 14 requires `mediaProjection` type for BOTH:
+- `getMediaProjection()` (to acquire the projection token)
+- `startForeground()` (to stay in foreground while projecting)
+The crash happens when `startForeground()` is called while MediaProjection is
+already stopped. **Fix:** `onStartCommand()` only calls `startForeground()` once
+(via `!overlayCreated` guard). Subsequent starts skip it — the service stays
+in foreground from the first call.
 
 ---
 
@@ -310,6 +326,9 @@ Typed `SPECIAL_USE` menyebabkan `getMediaProjection()` crash di device ini.
 | Broadcast NOT_EXPORTED | `OverlayService.kt:312` | Required on API 33+ for local-only broadcasts |
 | WindowManager type | `ScreenBlurOverlay.kt` | `TYPE_APPLICATION_OVERLAY` required on API 26+ |
 | Result overlay z-order | `ResultOverlayHelper.kt` | Added AFTER blur → WindowManager renders on top automatically |
+| Android 14 `startForeground` crash | `AndroidManifest.xml:35` | `startForeground()` crashes after `MediaProjection.stop()` on API 34+. `onStartCommand()` guards it behind `!overlayCreated` to only call it once. But `mediaProjection` type MUST stay in manifest — `getMediaProjection()` needs it. |
+| `lateinit` ordering in `onCreate` | `MainActivity.kt:37-51` | All `registerForActivityResult()` MUST be called BEFORE checking intent extras that trigger launcher usage |
+| System back navigation | `AppNavigation.kt:98-105` | `BackHandler` intercepts back on all screens except `home` and `setup`. Only `home` → back exits app. |
 
 ## Backend Gotchas
 

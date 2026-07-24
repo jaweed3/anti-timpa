@@ -75,8 +75,8 @@ class OverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!::windowManager.isInitialized) { stopSelf(); return START_NOT_STICKY }
-        startForeground(1, createNotification())
         if (!overlayCreated) {
+            startForeground(1, createNotification())
             showOverlay()
         }
         return START_STICKY
@@ -153,56 +153,78 @@ class OverlayService : Service() {
         }
     }
 
-    private fun ensureProjectionAndDisplay(): Boolean {
-        if (mediaProjection != null && virtualDisplay != null) return true
+    private fun ensureMediaProjection(): Boolean {
+        if (mediaProjection != null) return true
 
-        if (mediaProjection == null) {
-            val code = ScreenCaptureManager.getStoredCode()
-            val data = ScreenCaptureManager.getStoredData()
-            if (code == 0 || data == null) return false
+        val code = ScreenCaptureManager.getStoredCode()
+        val data = ScreenCaptureManager.getStoredData()
+        if (code == 0 || data == null) return false
 
-            val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return false
-            mediaProjection = manager.getMediaProjection(code, data) ?: return false
+        val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return false
+        mediaProjection = manager.getMediaProjection(code, data) ?: return false
 
-            mediaProjection!!.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() {
-                    Log.d(TAG, "MediaProjection stopped by system — clearing")
-                    releaseProjection()
-                    ScreenCaptureManager.clearProjection()
-                }
-            }, null)
-        }
+        mediaProjection!!.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                Log.d(TAG, "MediaProjection stopped by system — clearing")
+                releaseVirtualDisplay()
+                mediaProjection = null
+                ScreenCaptureManager.clearProjection()
+            }
+        }, null)
 
-        if (virtualDisplay == null && mediaProjection != null) {
-            val metrics = DisplayMetrics()
-            windowManager.defaultDisplay.getRealMetrics(metrics)
-            displayMetrics = metrics
+        return true
+    }
 
-            captureHandlerThread = HandlerThread("ScreenCapture").apply { start() }
-            captureHandler = Handler(captureHandlerThread!!.looper)
+    private fun ensureVirtualDisplay(): Boolean {
+        if (virtualDisplay != null) return true
+        if (mediaProjection == null) return false
 
-            imageReader = ImageReader.newInstance(
-                metrics.widthPixels, metrics.heightPixels,
-                android.graphics.PixelFormat.RGBA_8888, 2
-            )
+        val metrics = DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+        displayMetrics = metrics
 
+        captureHandlerThread = HandlerThread("ScreenCapture").apply { start() }
+        captureHandler = Handler(captureHandlerThread!!.looper)
+
+        imageReader = ImageReader.newInstance(
+            metrics.widthPixels, metrics.heightPixels,
+            android.graphics.PixelFormat.RGBA_8888, 2
+        )
+
+        try {
             virtualDisplay = mediaProjection!!.createVirtualDisplay(
                 "ScreenCapture",
                 metrics.widthPixels, metrics.heightPixels, metrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 imageReader!!.surface, null, captureHandler
             )
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "createVirtualDisplay failed: ${e.message}")
+            imageReader?.close()
+            imageReader = null
+            captureHandlerThread?.quitSafely()
+            captureHandlerThread = null
+            captureHandler = null
+            return false
         }
-
-        return mediaProjection != null && virtualDisplay != null
     }
 
     private fun startCapture() {
         Log.d(TAG, ">>> startCapture() called")
         ScreenBlurOverlay.showScanningOverlay(this)
 
-        if (!ensureProjectionAndDisplay()) {
+        if (!ensureMediaProjection()) {
             Log.e(TAG, "No projection available, re-requesting")
+            ScreenBlurOverlay.dismiss()
+            triggerCapture()
+            return
+        }
+
+        if (!ensureVirtualDisplay()) {
+            Log.w(TAG, "createVirtualDisplay failed — projection exhausted, re-granting")
+            releaseMediaProjection()
+            ScreenCaptureManager.clearProjection()
             ScreenBlurOverlay.dismiss()
             triggerCapture()
             return
@@ -212,6 +234,7 @@ class OverlayService : Service() {
         captureTimeout = Handler(Looper.getMainLooper())
         captureTimeout?.postDelayed({
             Log.w(TAG, "Capture timeout after 30s — dismissing blur")
+            releaseVirtualDisplay()
             ScreenBlurOverlay.dismiss()
         }, 30000L)
 
@@ -225,6 +248,7 @@ class OverlayService : Service() {
                 Log.w(TAG, "No image captured")
                 ScreenBlurOverlay.dismiss()
             }
+            releaseVirtualDisplay()
         }
 
         imageReader?.setOnImageAvailableListener({ reader ->
@@ -269,23 +293,28 @@ class OverlayService : Service() {
             startService(ocrIntent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process image: ${e.message}")
+            releaseVirtualDisplay()
             ScreenBlurOverlay.dismiss()
         }
     }
 
-    private fun releaseProjection() {
+    private fun releaseVirtualDisplay() {
         try { virtualDisplay?.release() } catch (_: Exception) {}
         try { imageReader?.close() } catch (_: Exception) {}
         captureHandlerThread?.quitSafely()
         captureTimeout?.removeCallbacksAndMessages(null)
-        mediaProjection?.stop()
-        mediaProjection = null
         virtualDisplay = null
         imageReader = null
         captureHandler = null
         captureHandlerThread = null
-        displayMetrics = null
         captureTimeout = null
+    }
+
+    private fun releaseMediaProjection() {
+        releaseVirtualDisplay()
+        try { mediaProjection?.stop() } catch (_: Exception) {}
+        mediaProjection = null
+        displayMetrics = null
     }
 
     private fun createNotificationChannel() {
@@ -318,7 +347,7 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
-        releaseProjection()
+        releaseMediaProjection()
         fabHelper?.destroy()
         indicatorHelper?.destroy()
         toggleOverlayCallback = null

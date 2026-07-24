@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.factlens.capture.ScreenCaptureManager
@@ -91,6 +92,15 @@ fun AppNavigation(activity: MainActivity) {
                 )
                 currentScreen = "scan_result"
             }
+        }
+    }
+
+    BackHandler(enabled = currentScreen != "home" && currentScreen != "setup") {
+        when (currentScreen) {
+            "history", "saved", "settings" -> currentScreen = "home"
+            "scan_result" -> { currentScreen = "home"; scanResult = null; scanResultHistoryId = null }
+            "history_detail" -> { currentScreen = previousScreen; selectedHistoryItem = null }
+            "scanning" -> currentScreen = "home"
         }
     }
 

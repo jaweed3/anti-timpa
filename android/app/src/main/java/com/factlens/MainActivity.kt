@@ -37,15 +37,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
-            requestScreenCapture()
-        }
-        if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
-        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
-            navigateToHistoryDetail = true
-            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
-        }
-
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
         notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
         mediaProjectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -58,6 +49,20 @@ class MainActivity : ComponentActivity() {
             } else {
                 Toast.makeText(this, "Screen recording permission denied", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            if (ScreenCaptureManager.hasProjection()) {
+                sendBroadcast(Intent("com.factlens.START_CAPTURE"))
+                moveTaskToBack(true)
+                return
+            }
+            requestScreenCapture()
+        }
+        if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
+        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
+            navigateToHistoryDetail = true
+            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
