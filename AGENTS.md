@@ -245,16 +245,14 @@ Format:   ChatCompletion.choices[0].message.content
 
 ### Environment Config
 
-File: `backend/.env` (gitignored)
+File: `backend/anti_timpa/.env` (gitignored)
 
 ```
-nara_api_key=sk-nry-unnwS-...
+NARA_ROUTER_API=sk-nry-unnwS-...
 nara_model=agnes-2.0-flash
-lang=id
-use_mock=false
 ```
 
-Loaded in `config.py` via `python-dotenv`. Access via `config.nara_api_key`, `config.nara_model`.
+Loaded in `config.py` via `python-dotenv`. Access via `config.nara_api_key` (env var `NARA_ROUTER_API`), `config.nara_model`.
 
 ### Testing
 
