@@ -23,7 +23,7 @@ local.properties
 wa-logs.txt
 
 # connection logs trash
-logs/connection.update/*
+logs/connection.update/
 
 # OS
 .DS_Store
