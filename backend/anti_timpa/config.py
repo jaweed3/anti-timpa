@@ -32,7 +32,7 @@ class AppConfig:
 
     nara_api_key: str = os.getenv("NARA_ROUTER_API", "")
     nara_base_url: str = "https://router.bynara.id/v1"
-    nara_model: str = "mimo-v2.5-hermes"
+    nara_model: str = "agnes-2.0-flash"
 
     cache_ttl_seconds: int = _int_env("CACHE_TTL_SECONDS", 3600)
     cache_max_size: int = _int_env("CACHE_MAX_SIZE", 1000)

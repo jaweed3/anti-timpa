@@ -44,3 +44,22 @@ data class ScanResultData(
     val explanation: String,
     val sources: List<Source>
 )
+
+data class ScamCheckRequest(
+    val text: String
+)
+
+data class ScamCheckResponse(
+    val verdict: String,
+    val riskScore: Int,
+    val flaggedItems: List<FlaggedItem>,
+    val explanation: String,
+    val sources: List<String>,
+    val shouldBlur: Boolean = false
+)
+
+data class FlaggedItem(
+    val type: String,
+    val value: String,
+    val reason: String
+)

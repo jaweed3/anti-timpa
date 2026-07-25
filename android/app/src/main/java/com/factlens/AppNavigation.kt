@@ -9,9 +9,11 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.factlens.capture.ScreenCaptureManager
+import com.factlens.network.VerdictEngine
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import com.factlens.history.HistoryDatabase
@@ -40,28 +42,25 @@ fun AppNavigation(activity: MainActivity) {
     var selectedHistoryItem by remember { mutableStateOf<ScanHistory?>(null) }
     var scanResultHistoryId by remember { mutableStateOf<Long?>(null) }
     var previousScreen by remember { mutableStateOf("home") }
+    var backendUrl by remember {
+        mutableStateOf(
+            activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+                .getString("backend_url", VerdictEngine.backendUrl) ?: VerdictEngine.backendUrl
+        )
+    }
 
-    LaunchedEffect(activity.triggerCaptureRequested) {
-        if (activity.triggerCaptureRequested) {
-            activity.triggerCaptureRequested = false
-            val manager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager ?: return@LaunchedEffect
-            activity.mediaProjectionLauncher.launch(manager.createScreenCaptureIntent())
+    LaunchedEffect(Unit) {
+        val savedUrl = activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+            .getString("backend_url", null)
+        if (savedUrl != null) {
+            VerdictEngine.backendUrl = savedUrl
         }
     }
 
     LaunchedEffect(activity.navigateToHistoryDetail) {
         if (activity.navigateToHistoryDetail) {
+            currentScreen = "history"
             activity.navigateToHistoryDetail = false
-            val id = activity.pendingHistoryDetailId
-            if (id > 0) {
-                val dao = HistoryDatabase.getInstance(activity).historyDao()
-                val item = dao.getById(id)
-                if (item != null) {
-                    selectedHistoryItem = item
-                    previousScreen = "history"
-                    currentScreen = "history_detail"
-                }
-            }
         }
     }
 
@@ -93,6 +92,15 @@ fun AppNavigation(activity: MainActivity) {
                 )
                 currentScreen = "scan_result"
             }
+        }
+    }
+
+    BackHandler(enabled = currentScreen != "home" && currentScreen != "setup") {
+        when (currentScreen) {
+            "history", "saved", "settings" -> currentScreen = "home"
+            "scan_result" -> { currentScreen = "home"; scanResult = null; scanResultHistoryId = null }
+            "history_detail" -> { currentScreen = previousScreen; selectedHistoryItem = null }
+            "scanning" -> currentScreen = "home"
         }
     }
 
@@ -152,6 +160,13 @@ fun AppNavigation(activity: MainActivity) {
                         activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
                             .edit().putBoolean("overlay_visible", visible).apply()
                         toggleOverlayCallback?.invoke(visible)
+                    },
+                    backendUrl = backendUrl,
+                    onSaveBackendUrl = { newUrl ->
+                        backendUrl = newUrl
+                        VerdictEngine.backendUrl = newUrl
+                        activity.getSharedPreferences("factlens_prefs", Context.MODE_PRIVATE)
+                            .edit().putString("backend_url", newUrl).apply()
                     }
                 )
             }
@@ -170,7 +185,7 @@ fun AppNavigation(activity: MainActivity) {
                         }
                     },
                     onShare = {
-                        val text = "FactLens Verification:\n\"${result.claim}\"\nVerdict: ${result.verdict}\nConfidence: ${(result.confidence * 100).toInt()}%\n${result.explanation}"
+                        val text = "AntiTimpa Verification:\n\"${result.claim}\"\nVerdict: ${result.verdict}\nConfidence: ${(result.confidence * 100).toInt()}%\n${result.explanation}"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             this.type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, text)
@@ -193,7 +208,7 @@ fun AppNavigation(activity: MainActivity) {
                         }
                     },
                     onShare = {
-                        val text = "FactLens Verification:\n\"${item.claim}\"\nVerdict: ${item.verdict}\nConfidence: ${(item.confidence * 100).toInt()}%\n${item.explanation}"
+                        val text = "AntiTimpa Verification:\n\"${item.claim}\"\nVerdict: ${item.verdict}\nConfidence: ${(item.confidence * 100).toInt()}%\n${item.explanation}"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             this.type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, text)

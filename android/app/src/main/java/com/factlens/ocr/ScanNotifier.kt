@@ -8,7 +8,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
-private const val TAG = "FactLens.Notifier"
+private const val TAG = "AntiTimpa.Notifier"
 
 object ScanNotifier {
 
@@ -35,7 +35,7 @@ object ScanNotifier {
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_menu_search)
-            .setContentTitle("FactLens Scan Complete")
+            .setContentTitle("AntiTimpa Scan Complete")
             .setContentText("$verdict — ${(confidence * 100).toInt()}% confidence")
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

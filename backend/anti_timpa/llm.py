@@ -37,12 +37,13 @@ class LLMClient:
             raise RuntimeError("No NARA_ROUTER_API key configured.")
 
         def _call():
-            return self._client.chat.completions.create(
+            resp = self._client.chat.completions.create(
                 model=CFG.nara_model,
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            return resp.choices[0].message.content or ""
 
         return _retry(_call)
 
@@ -51,7 +52,7 @@ class LLMClient:
             raise RuntimeError("No NARA_ROUTER_API key configured.")
 
         def _call():
-            return self._client.chat.completions.create(
+            resp = self._client.chat.completions.create(
                 model=CFG.nara_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -60,6 +61,7 @@ class LLMClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            return resp.choices[0].message.content or ""
 
         return _retry(_call)
 

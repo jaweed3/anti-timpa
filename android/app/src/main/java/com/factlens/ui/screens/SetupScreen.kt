@@ -44,9 +44,9 @@ fun SetupScreen(
                 Text("Setup", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
                 Spacer(Modifier.height(Spacing.lg))
 
-                SetupStep(number = "1", title = "Overlay Permission", desc = "Allow FactLens to show the floating button", done = hasOverlayPermission, onAction = onRequestOverlay)
+                SetupStep(number = "1", title = "Overlay Permission", desc = "Allow AntiTimpa to show the floating button", done = hasOverlayPermission, onAction = onRequestOverlay)
                 Spacer(Modifier.height(Spacing.md))
-                SetupStep(number = "2", title = "Screen Recording", desc = "Allow FactLens to capture your screen", done = hasScreenRecording, onAction = onRequestScreenRecording)
+                SetupStep(number = "2", title = "Screen Recording", desc = "Allow AntiTimpa to capture your screen", done = hasScreenRecording, onAction = onRequestScreenRecording)
                 Spacer(Modifier.height(Spacing.md))
                 SetupStep(number = "3", title = "Start Overlay", desc = "Launch the floating verification button", done = isServiceRunning, onAction = onStartService)
             }
@@ -54,7 +54,7 @@ fun SetupScreen(
 
         Spacer(Modifier.weight(1f))
         Text(
-            "Tap the floating button on any screen\nto verify information instantly",
+            "Hold the floating button on any screen\nto scan for scams instantly",
             fontSize = 13.sp,
             color = FactLensColors.neutralGray,
             textAlign = TextAlign.Center

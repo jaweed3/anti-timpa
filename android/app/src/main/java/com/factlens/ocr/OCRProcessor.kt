@@ -7,13 +7,16 @@ import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.factlens.model.FlaggedItem
 import com.factlens.model.VerificationResponse
 import com.factlens.network.VerdictEngine
+import com.factlens.overlay.OverlayService
 import com.factlens.overlay.ResultOverlayHelper
+import com.factlens.overlay.ScreenBlurOverlay
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
-private const val TAG = "FactLens.OCR"
+private const val TAG = "AntiTimpa.OCR"
 
 class OCRProcessor : IntentService("OCRProcessor") {
 
@@ -51,33 +54,55 @@ class OCRProcessor : IntentService("OCRProcessor") {
                 Log.d(TAG, "OCR completed in ${ocrElapsed}ms")
 
                 if (text.isNotBlank()) {
-                    verifyText(text)
+                    verifyText(text, imagePath)
                 } else {
                     Log.w(TAG, "No text detected in image")
-                    showResult(-1L, "", "No text detected.", "Unknown", 0.0, emptyList())
+                    showResult(-1L, "", "No text detected.", "Unknown", 0.0, emptyList(), emptyList())
                 }
                 bitmap.recycle()
-                file.delete()
             }
             .addOnFailureListener { e ->
                 val ocrElapsed = System.currentTimeMillis() - ocrStartTime
                 Log.e(TAG, "OCR FAILED after ${ocrElapsed}ms: ${e.message}", e)
-                showResult(-1L, "", "OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
+                showResult(-1L, "", "OCR error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList(), emptyList())
                 bitmap.recycle()
-                file.delete()
             }
     }
 
-    private fun verifyText(text: String) {
+    private fun verifyText(text: String, screenshotPath: String) {
         val engine = VerdictEngine()
         try {
-            val response: com.factlens.model.VerificationResponse = runBlocking { engine.verify(text) }
-            val historyId = HistorySaver.saveToHistory(this, text, response)
-            showResult(historyId, response.claim, response.explanation, response.verdict, response.confidence, response.sources)
+            val response = runBlocking { engine.verify(text) }
+            val historyId = HistorySaver.saveToHistory(this, text, response, screenshotPath)
+            val flaggedItems = parseFlaggedItems(response)
+
+            showResult(historyId, response.claim, response.explanation,
+                response.verdict, response.confidence, response.sources, flaggedItems)
         } catch (e: Exception) {
             Log.e(TAG, "Verification FAILED: ${e.message}", e)
-            showResult(-1L, text, "Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList())
+            ScreenBlurOverlay.dismiss()
+            showResult(-1L, text, "Error: ${e.localizedMessage ?: "Unknown error"}", "Error", 0.0, emptyList(), emptyList())
         }
+    }
+
+    private fun parseFlaggedItems(response: VerificationResponse): List<FlaggedItem> {
+        val items = mutableListOf<FlaggedItem>()
+        val lines = response.explanation.split("\n")
+        var inFlagged = false
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed == "Item terdeteksi:") {
+                inFlagged = true
+                continue
+            }
+            if (inFlagged && trimmed.startsWith("\u2022")) {
+                val parts = trimmed.removePrefix("\u2022 ").split(" \u2014 ")
+                if (parts.size == 2) {
+                    items.add(FlaggedItem(type = "detected", value = parts[0], reason = parts[1]))
+                }
+            }
+        }
+        return items
     }
 
     private fun showResult(
@@ -86,17 +111,18 @@ class OCRProcessor : IntentService("OCRProcessor") {
         explanation: String,
         verdict: String,
         confidence: Double,
-        sources: List<com.factlens.model.Source>
+        sources: List<com.factlens.model.Source>,
+        flaggedItems: List<FlaggedItem>
     ) {
+        ScreenBlurOverlay.hideProgress()
         try {
-            ResultOverlayHelper.showResult(this, historyId, claim, explanation, verdict, confidence, sources)
+            ResultOverlayHelper.showResult(this, historyId, claim, explanation, verdict,
+                confidence, sources, flaggedItems)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show result overlay: ${e.message}", e)
         }
         ScanNotifier.showScanNotification(this, verdict, confidence)
-        val scanComplete = Intent("com.factlens.SCAN_COMPLETE")
-        scanComplete.`package` = packageName
-        sendBroadcast(scanComplete)
+        OverlayService.hideScanningCallback?.invoke()
         Log.d(TAG, "═══════════════════════════════════════")
         Log.d(TAG, "OCR PROCESSING COMPLETE")
         Log.d(TAG, "═══════════════════════════════════════")

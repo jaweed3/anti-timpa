@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +30,11 @@ fun SettingsScreen(
     hasOverlayPermission: Boolean,
     onRequestOverlay: () -> Unit,
     overlayVisible: Boolean = true,
-    onToggleOverlay: (Boolean) -> Unit = {}
+    onToggleOverlay: (Boolean) -> Unit = {},
+    backendUrl: String = "http://192.168.120.75:8000",
+    onSaveBackendUrl: (String) -> Unit = {}
 ) {
+    var urlText by remember { mutableStateOf(backendUrl) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -74,7 +78,7 @@ fun SettingsScreen(
                             Icon(Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
                         },
                         title = "Overlay Permission",
-                        desc = if (hasOverlayPermission) "Granted \u2713" else "Allow FactLens to show the floating button",
+                        desc = if (hasOverlayPermission) "Granted \u2713" else "Allow AntiTimpa to show the floating button",
                         done = hasOverlayPermission,
                         onAction = onRequestOverlay
                     )
@@ -116,6 +120,39 @@ fun SettingsScreen(
                         done = false,
                         onAction = { }
                     )
+                    Spacer(Modifier.height(Spacing.md))
+
+                    Divider(color = FactLensColors.outlineVariant, thickness = 0.5.dp)
+                    Spacer(Modifier.height(Spacing.md))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Cloud, contentDescription = null, modifier = Modifier.size(24.dp), tint = FactLensColors.primary)
+                        Spacer(Modifier.width(Spacing.md))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Server URL", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = FactLensColors.onSurface)
+                            Spacer(Modifier.height(Spacing.sm))
+                            OutlinedTextField(
+                                value = urlText,
+                                onValueChange = { urlText = it },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 13.sp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(Spacing.sm))
+                    Button(
+                        onClick = { onSaveBackendUrl(urlText) },
+                        modifier = Modifier.align(Alignment.End),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FactLensColors.primary),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+                    ) {
+                        Text("Save", fontSize = 13.sp)
+                    }
                 }
             }
 

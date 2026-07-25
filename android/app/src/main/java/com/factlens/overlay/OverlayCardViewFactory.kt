@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.factlens.model.FlaggedItem
 
 object OverlayCardViewFactory {
 
@@ -26,12 +27,18 @@ object OverlayCardViewFactory {
 
     fun getVerdictColor(verdict: String): Int = when (verdict.lowercase()) {
         "supported" -> 0xFF00AA44.toInt()
-        "misleading", "unsupported" -> 0xFFDD3333.toInt()
+        "contradicted" -> 0xFFDD3333.toInt()
         else -> 0xFFFF8C00.toInt()
     }
 
     fun createBadge(context: Context, verdict: String, color: Int, px: (Int) -> Int) = createTextView(context) {
-        text = verdict.uppercase(); setTextColor(0xFFFFFFFF.toInt()); textSize = 12f; typeface = Typeface.DEFAULT_BOLD
+        val label = when (verdict.lowercase()) {
+            "supported" -> "\u2705 Aman"
+            "misleading" -> "\u26A0\uFE0F Mencurigakan"
+            "contradicted" -> "\uD83D\uDEA8 Terindikasi Penipuan"
+            else -> verdict
+        }
+        text = label; setTextColor(0xFFFFFFFF.toInt()); textSize = 12f; typeface = Typeface.DEFAULT_BOLD
         background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; setColor(color); setCornerRadius(px(6).toFloat()) }
         setPadding(px(8), px(4), px(8), px(4))
     }
@@ -43,6 +50,52 @@ object OverlayCardViewFactory {
 
     fun createVerdictLabel(context: Context, verdict: String, px: (Int) -> Int) = createTextView(context) {
         text = verdict; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setTextColor(0xFF191C20.toInt())
+    }
+
+    fun createFlaggedItemsView(context: Context, items: List<FlaggedItem>, px: (Int) -> Int): View {
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, px(8), 0, 0)
+        }
+
+        createTextView(context) {
+            text = "Item Terdeteksi:"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(0xFFDD3333.toInt())
+            setPadding(0, 0, 0, px(4))
+        }.also { container.addView(it) }
+
+        items.forEach { item ->
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, px(2), 0, px(2))
+            }
+
+            val icon = when (item.type) {
+                "account" -> "\uD83C\uDFE6"
+                "phone" -> "\uD83D\uDCDE"
+                "url" -> "\uD83D\uDD17"
+                "pattern" -> "\u26A0\uFE0F"
+                else -> "\u2022"
+            }
+
+            row.addView(TextView(context).apply {
+                text = icon
+                textSize = 13f
+                setPadding(0, 0, px(4), 0)
+            })
+
+            row.addView(TextView(context).apply {
+                text = "${item.value} — ${item.reason}"
+                textSize = 13f
+                setTextColor(0xFF5C6168.toInt())
+            })
+
+            container.addView(row)
+        }
+
+        return container
     }
 
     fun createExplanationView(context: Context, explanation: String, px: (Int) -> Int) = createTextView(context) {

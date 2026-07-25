@@ -22,9 +22,7 @@ class OverlayFabHelper(private val context: Context) {
         val params = OverlayFabViewFactory.createLayoutParams()
 
         val activator = OverlayFabActivator(context, fabViews.pulseView, fabViews.iconView)
-        touchHandler = OverlayFabTouchHandler(context, activator).apply {
-            this.onTriggerCapture = this@OverlayFabHelper.onTriggerCapture
-        }
+        touchHandler = OverlayFabTouchHandler(context, activator)
 
         state = OverlayFabState(container, params, fabViews)
         return container
@@ -36,6 +34,7 @@ class OverlayFabHelper(private val context: Context) {
 
     fun setupDraggable(view: View, params: WindowManager.LayoutParams) {
         touchHandler?.setupDraggable(view, params)
+        touchHandler?.onTriggerCapture = onTriggerCapture
     }
 
     fun snapToEdge() {

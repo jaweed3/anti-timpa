@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
-import android.os.Build
 import android.util.Log
 
 private const val TAG = "FactLens.CaptureMgr"
@@ -50,18 +49,6 @@ class ScreenCaptureManager(private val context: Context) {
         val intent = manager.createScreenCaptureIntent()
         Log.d(TAG, "Launching screen capture intent")
         activity.startActivityForResult(intent, 1001)
-    }
-
-    fun startCaptureService(activity: Activity) {
-        Log.d(TAG, "Starting ScreenCaptureService...")
-        val intent = Intent(activity, ScreenCaptureService::class.java)
-        intent.putExtra("code", projectionCode)
-        intent.putExtra("data", projectionIntent)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            activity.startForegroundService(intent)
-        } else {
-            activity.startService(intent)
-        }
     }
 
     data class CaptureResult(val success: Boolean, val imagePath: String?)

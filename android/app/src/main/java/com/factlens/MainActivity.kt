@@ -2,7 +2,11 @@ package com.factlens
 
 import android.Manifest
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -13,7 +17,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import com.factlens.capture.ScreenCaptureManager
-import com.factlens.capture.ScreenCaptureService
 import com.factlens.overlay.OverlayService
 import com.factlens.ui.theme.FactLensTheme
 
@@ -27,7 +30,6 @@ class MainActivity : ComponentActivity() {
 
     var hasScreenRecording by mutableStateOf(ScreenCaptureManager.hasProjection())
         private set
-    var triggerCaptureRequested by mutableStateOf(false)
     var navigateToScanResult by mutableStateOf(false)
     var navigateToHistoryDetail by mutableStateOf(false)
     var pendingHistoryDetailId by mutableStateOf(-1L)
@@ -35,24 +37,32 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (intent?.getBooleanExtra("trigger_capture", false) == true) triggerCaptureRequested = true
-        if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
-        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
-            navigateToHistoryDetail = true
-            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
-        }
-
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
         notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
         mediaProjectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                Log.d(TAG, ">>> MediaProjection permission GRANTED")
                 ScreenCaptureManager.setProjectionResult(result.resultCode, result.data)
                 hasScreenRecording = true
-                val intent = Intent(this, ScreenCaptureService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+                sendBroadcast(Intent("com.factlens.START_CAPTURE"))
+                moveTaskToBack(true)
             } else {
                 Toast.makeText(this, "Screen recording permission denied", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            if (ScreenCaptureManager.hasProjection()) {
+                sendBroadcast(Intent("com.factlens.START_CAPTURE"))
+                moveTaskToBack(true)
+                return
+            }
+            requestScreenCapture()
+        }
+        if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
+        if (intent?.getBooleanExtra("open_history_detail", false) == true) {
+            navigateToHistoryDetail = true
+            pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -70,11 +80,31 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent?.getBooleanExtra("trigger_capture", false) == true) triggerCaptureRequested = true
+        if (intent?.getBooleanExtra("trigger_capture", false) == true) {
+            requestScreenCapture()
+        }
         if (intent?.getBooleanExtra("open_scan_result", false) == true) navigateToScanResult = true
         if (intent?.getBooleanExtra("open_history_detail", false) == true) {
             navigateToHistoryDetail = true
             pendingHistoryDetailId = intent.getLongExtra("history_id", -1L)
+        }
+    }
+
+    private fun requestScreenCapture() {
+        if (ScreenCaptureManager.hasProjection()) {
+            Log.d(TAG, ">>> Already have projection, triggering capture directly")
+            sendBroadcast(Intent("com.factlens.START_CAPTURE"))
+            moveTaskToBack(true)
+            return
+        }
+        Log.d(TAG, ">>> Launching screen capture intent from MainActivity")
+        val manager = getSystemService(MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+        if (manager != null) {
+            try {
+                mediaProjectionLauncher.launch(manager.createScreenCaptureIntent())
+            } catch (e: Exception) {
+                Log.e(TAG, ">>> Failed to launch screen capture: ${e.message}", e)
+            }
         }
     }
 }

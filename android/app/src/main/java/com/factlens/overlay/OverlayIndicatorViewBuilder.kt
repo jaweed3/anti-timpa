@@ -30,7 +30,7 @@ object OverlayIndicatorViewBuilder {
 
         val spinner = ProgressBar(context, null, android.R.attr.progressBarStyleSmall)
         val label = TextView(context).apply {
-            text = "FactLens Scanning..."
+            text = "AntiTimpa Scanning..."
             setTextColor(0xFFFFFFFF.toInt())
             textSize = 14f
             setPadding(px(8), 0, 0, 0)

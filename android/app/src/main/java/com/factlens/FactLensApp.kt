@@ -13,7 +13,7 @@ class FactLensApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        VerdictEngine.USE_MOCK = true
+        VerdictEngine.USE_MOCK = false
 
         val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

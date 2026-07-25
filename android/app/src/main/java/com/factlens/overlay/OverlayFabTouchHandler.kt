@@ -3,6 +3,7 @@ package com.factlens.overlay
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -45,7 +46,6 @@ class OverlayFabTouchHandler(
                     if (!isDragging && (Math.abs(dx) > touchSlop || Math.abs(dy) > touchSlop)) {
                         isDragging = true
                         longPressHandler?.removeCallbacksAndMessages(null)
-                        if (isActivated) { isActivated = false; activator.deactivate() }
                     }
                     if (isDragging) {
                         params.x = initialX + dx.toInt(); params.y = initialY + dy.toInt()
@@ -55,12 +55,14 @@ class OverlayFabTouchHandler(
                 }
                 MotionEvent.ACTION_UP -> {
                     longPressHandler?.removeCallbacksAndMessages(null)
+                    Log.d("FactLens.Touch", "ACTION_UP: isDragging=$isDragging isActivated=$isActivated hasCallback=${onTriggerCapture != null}")
                     if (isDragging) {
                         isDragging = false
                         snapToEdge(view, params)
                     }
                     if (isActivated) {
                         isActivated = false; activator.deactivate()
+                        Log.d("FactLens.Touch", "Invoking onTriggerCapture")
                         onTriggerCapture?.invoke()
                     }
                     true
