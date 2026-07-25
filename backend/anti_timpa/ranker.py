@@ -5,7 +5,19 @@ from typing import List
 from anti_timpa.config import CFG
 from anti_timpa.models import Source
 
-__all__ = ["rank_sources"]
+__all__ = ["rank_sources", "label_source"]
+
+
+def label_source(s: Source) -> str:
+    for d in CFG.fact_check_domains:
+        if d in s.url:
+            return "FACT-CHECK"
+    for d in CFG.trusted_domains:
+        if d in s.url:
+            return "TRUSTED"
+    if ".gov" in s.url or ".edu" in s.url:
+        return "TRUSTED"
+    return "UNKNOWN"
 
 
 def rank_sources(sources: List[Source], claim: str) -> List[Source]:

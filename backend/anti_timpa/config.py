@@ -37,6 +37,8 @@ class AppConfig:
     cache_ttl_seconds: int = _int_env("CACHE_TTL_SECONDS", 3600)
     cache_max_size: int = _int_env("CACHE_MAX_SIZE", 1000)
 
+    search_engine: str = os.getenv("SEARCH_ENGINE", "google")
+
     trusted_domains: tuple[str, ...] = (
         "reuters.com", "apnews.com", "bbc.com", "bbc.co.uk",
         "nytimes.com", "theguardian.com", "washingtonpost.com",
@@ -45,6 +47,10 @@ class AppConfig:
         "scholar.google.com", "pubmed.ncbi.nlm.nih.gov",
         "kemkes.go.id", "kmov.id", "turnbackhoax.id",
         "komdigi.go.id", "liputan6.com", "medcom.id",
+    )
+
+    fact_check_domains: tuple[str, ...] = (
+        "turnbackhoax.id", "komdigi.go.id", "kmov.id",
     )
 
 

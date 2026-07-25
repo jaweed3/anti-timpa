@@ -31,7 +31,12 @@ class SearchEngine:
         )
 
     async def search(self, query: str, max_results: int = 5) -> List[Source]:
-        raw = await self._duckduckgo(query, max_results)
+        engine = CFG.search_engine
+        if engine == "google":
+            raw = await self._google(query, max_results)
+        else:
+            raw = await self._duckduckgo(query, max_results)
+
         seen: set[str] = set()
         unique: list[Source] = []
         for s in raw:
@@ -42,8 +47,36 @@ class SearchEngine:
         trusted = [s for s in unique if any(d in s.url for d in CFG.trusted_domains)]
         others = [s for s in unique if s not in trusted]
         result = (trusted + others)[:max_results]
-        logger.info("Found %d results (%d trusted)", len(result), len(trusted))
+        logger.info("Found %d results (%d trusted) via %s", len(result), len(trusted), engine)
         return result
+
+    async def _google(self, query: str, max_results: int) -> List[Source]:
+        url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&hl=en"
+        try:
+            resp = await self._client.get(url)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
+            results: list[Source] = []
+
+            for el in soup.select("#search .g")[:max_results]:
+                a = el.select_one("a[href^='/url?q=']") or el.select_one("a[href^='http']")
+                h3 = el.select_one("h3")
+                snippet_el = el.select_one(".VwiC3b, span.aCOpRe, .st")
+
+                if a and h3:
+                    href = str(a.get("href", ""))
+                    if href.startswith("/url?q="):
+                        href = parse_qs(urlparse(href).query).get("q", [""])[0]
+                    snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+                    results.append(Source(title=h3.get_text(strip=True), url=href, snippet=snippet))
+
+            return results
+        except httpx.HTTPStatusError as e:
+            logger.error("Google HTTP %s", e.response.status_code)
+            return []
+        except Exception:
+            logger.exception("Google search failed")
+            return []
 
     async def _duckduckgo(self, query: str, max_results: int) -> List[Source]:
         url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
