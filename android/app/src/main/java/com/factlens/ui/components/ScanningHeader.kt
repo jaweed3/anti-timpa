@@ -32,7 +32,7 @@ fun ScanningHeader(onDismiss: () -> Unit) {
             modifier = Modifier.clip(RoundedCornerShape(50)).background(FactLensColors.surfacePureWhite.copy(alpha = 0.9f)).padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("FactLens", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
+            Text("AntiTimpa", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
         }
         Box(
             modifier = Modifier.size(40.dp).clip(RoundedCornerShape(50)).background(FactLensColors.surfacePureWhite.copy(alpha = 0.9f)),

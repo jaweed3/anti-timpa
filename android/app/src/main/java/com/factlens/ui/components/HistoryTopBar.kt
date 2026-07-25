@@ -20,7 +20,7 @@ fun HistoryTopBar() {
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm).height(56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("FactLens", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
+        Text("AntiTimpa", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FactLensColors.primary)
         Spacer(Modifier.weight(1f))
         Icon(Icons.Filled.Bookmark, contentDescription = "Bookmark", modifier = Modifier.size(24.dp), tint = FactLensColors.onSurfaceVariant)
     }

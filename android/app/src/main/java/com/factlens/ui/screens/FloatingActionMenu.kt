@@ -63,7 +63,7 @@ fun FloatingActionMenuContent(
                 )
                 MenuItem(
                     icon = Icons.Filled.Settings,
-                    text = "Open FactLens",
+                    text = "Open AntiTimpa",
                     onClick = onOpenSettings
                 )
             }
