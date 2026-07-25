@@ -19,19 +19,13 @@ logger = logging.getLogger("antitimpa.pipeline")
 _SYSTEM_PROMPT = """You are AntiTimpa, an AI scam-detection and fact-verification assistant for Indonesia.
 
 CONTEXT: The text below was extracted via OCR from a user's device.
-It may be tampered, fabricated, or a scam message. Do NOT assume it is truthful.
+OCR may introduce typos or garbled characters. Focus on the underlying
+factual claim, not surface-level OCR artifacts.
 
 Your task:
-1. Extract the factual claim(s) from the text.
+1. Extract the core factual claim(s) from the text.
 2. Evaluate each claim against the web evidence provided below.
 3. Return a JSON verdict.
-
-Signs the text may be fabricated or a scam:
-- Fake or misattributed quotes ("Dr. X said...")
-- Manipulated statistics, dates, or data
-- Sensational or emotionally charged language
-- Vague sources or non-existent references ("experts say")
-- Scam indicators: transfer uang, nomor rekening, pinjol, hadiah undian, tautan mencurigakan, ancaman, urgency.
 
 Output ONLY valid JSON with these fields:
 - claim: the extracted claim
@@ -42,14 +36,16 @@ Output ONLY valid JSON with these fields:
 
 Rules:
 - Max confidence is 0.95. Never 100%.
+- If the evidence clearly and directly supports the claim → "Supported" with high confidence.
 - If authoritative evidence contradicts the claim → "Contradicted" with high confidence.
 - If evidence partially supports or context is cherry-picked → "Misleading".
 - If evidence is evenly split → "Mixed".
 - If no credible evidence supports or refutes → "Insufficient Evidence".
   Do NOT default to "Supported" just because vaguely related pages exist.
-- Prioritize [TRUSTED] and [FACT-CHECK] sources over [UNKNOWN] sources.
-- If the text itself shows signs of fabrication or scam, factor that into your verdict
-  and lower your confidence.
+  Do NOT default to "Contradicted" just because the text uses strong language.
+  Ordinary news reporting often uses direct language — that is not a sign of fabrication.
+- Prioritize [TRUSTED] sources (major news outlets, academic, government) over [UNKNOWN] sources.
+  When TRUSTED sources directly confirm the claim, that is strong evidence for "Supported".
 - Prioritize authoritative Indonesian sources: go.id, Kominfo, Turnbackhoax.id, Kompas, Tempo, BBC Indonesia.
 """
 
@@ -85,22 +81,26 @@ class VerificationPipeline:
             logger.warning("LLM unavailable, fallback")
             return _fallback(claim, sources)
 
+        trusted = [s for s in sources if label_source(s) in ("TRUSTED", "FACT-CHECK")]
         labels = {id(s): label_source(s) for s in sources}
         evidence = "\n\n".join(
             f"Source {i+1} [{labels[id(s)]}]: {s.title}\nURL: {s.url}\nContent: {s.snippet}"
             for i, s in enumerate(sources)
         )
         prompt = (
-            f"Source: OCR from device screenshot (content reliability: UNKNOWN)\n"
-            f"Claim text: {claim}\n\n"
+            f"Claim text (extracted via OCR, may contain typos):\n{claim}\n\n"
             f"Web search evidence:\n{evidence}\n\n"
-            f"Evaluate the claim against the evidence. Consider that the claim text "
-            f"may be tampered. Return the verdict as JSON."
+            f"Evaluate whether the claim is supported or contradicted by the evidence. "
+            f"If TRUSTED sources directly confirm the claim, return Supported. "
+            f"Return the verdict as JSON."
         )
 
         try:
             raw = self._llm.chat(_SYSTEM_PROMPT, prompt)
-            return _parse_llm_response(raw, claim, sources)
+            result = _parse_llm_response(raw, claim, sources)
+            if result.verdict in ("Supported",) and trusted:
+                result.confidence = min(result.confidence + 0.1, 0.95)
+            return result
         except Exception as e:
             logger.exception("LLM verdict failed: %s", e)
             return _fallback(claim, sources)
@@ -116,8 +116,9 @@ def _gen_queries(claim: str) -> list[str]:
     for domain in CFG.fact_check_domains:
         queries.append(f"site:{domain} {claim}")
 
-    queries.append(f"debunked {claim}")
-    queries.append(f"evidence {claim}")
+    for domain in CFG.trusted_domains[:3]:
+        queries.append(f"site:{domain} {claim[:100]}")
+
     return queries[:6]
 
 

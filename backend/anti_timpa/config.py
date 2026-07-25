@@ -31,8 +31,8 @@ class AppConfig:
     rate_limit_per_minute: int = _int_env("RATE_LIMIT_PER_MINUTE", 30)
 
     nara_api_key: str = os.getenv("NARA_ROUTER_API", "")
-    nara_base_url: str = "https://router.bynara.id/v1"
-    nara_model: str = "agnes-2.0-flash"
+    nara_base_url: str = os.getenv("NARA_BASE_URL", "https://router.bynara.id/v1")
+    nara_model: str = os.getenv("NARA_MODEL", "deepseek-v4-flash-free")
 
     cache_ttl_seconds: int = _int_env("CACHE_TTL_SECONDS", 3600)
     cache_max_size: int = _int_env("CACHE_MAX_SIZE", 1000)
