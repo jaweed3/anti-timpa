@@ -19,6 +19,12 @@ local.properties
 *.swo
 *~
 
+# trash
+wa-logs.txt
+
+# connection logs trash
+logs/connection.update/*
+
 # OS
 .DS_Store
 Thumbs.db
